@@ -17,6 +17,7 @@ import { cn } from "~/lib/cn";
 import { InteliSymbol } from "~/lib/logos";
 import { GitlabButton, GithubStarButton, SlackButton, ThemeToggle, type Theme } from "~/shell/HeaderActions";
 import { ModuleProgress } from "~/shell/ModuleProgress";
+import { NextScored } from "~/shell/NextScored";
 import { Calendario } from "~/screens/Calendario";
 import { NotificationsButton } from "~/screens/Notificacoes";
 import { Faltas } from "~/screens/Faltas";
@@ -418,8 +419,8 @@ export function Overview({
   if (!m) {
     return (
       <div className="space-y-4">
-        <h1 className="flex items-center gap-2 text-xl font-medium text-fg">
-          <InteliSymbol size={22} />
+        <h1 className="flex items-center gap-2 text-2xl font-medium text-fg">
+          <InteliSymbol size={26} />
           Adalove
         </h1>
         <Card className="p-6">
@@ -453,9 +454,17 @@ export function Overview({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h1 className="flex items-center gap-2 text-xl font-medium text-fg">
-          <InteliSymbol size={22} />
+      {/* `min-h-12` dá folga acima e abaixo do item mais alto (os botões, 36px):
+          sem ela a régua encostava nas duas bordas da faixa e o conjunto lia
+          como esticado em vez de centrado.
+
+          `mb-6` e não `pb-*`: padding entraria na conta do `min-h-12` e
+          desalinharia o que acabou de ser centrado. A margem colapsa com o
+          `mt-4` que o `space-y-4` do pai põe no primeiro cartão, então o vão
+          entre a faixa e a grade de notas fica nos 24px da maior das duas. */}
+      <div className="mb-6 flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1">
+        <h1 className="flex items-center gap-2 text-2xl font-medium text-fg">
+          <InteliSymbol size={26} />
           Adalove
         </h1>
         <ModuleProgress
@@ -463,6 +472,7 @@ export function Overview({
           onSelectSection={onSelectSection}
           switchingTo={switchingSection}
         />
+        <NextScored view={view} onOpen={onOpenActivity} />
         <div className="ml-auto flex items-center gap-2">
           <SlackButton />
           <GitlabButton />

@@ -1,9 +1,10 @@
 import { Check, ChevronDown, Loader2, Lock, LockOpen } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApi } from "~/data/api";
+import { currentWeek } from "~/data/schedule";
 import type { SectionView } from "~/data/viewmodel";
 import { cn } from "~/lib/cn";
-import { formatDate, startOfWeek } from "~/lib/date";
+import { formatDate } from "~/lib/date";
 import { Skeleton } from "~/ui/Skeleton";
 import { Tooltip } from "~/ui/Tooltip";
 
@@ -39,9 +40,6 @@ interface SectionRow {
   orientation?: string | null;
 }
 
-const DAY = 86_400_000;
-const WEEK = 7 * DAY;
-
 function isApproved(status: string | null | undefined) {
   return (status ?? "").toUpperCase().startsWith("APROV");
 }
@@ -75,39 +73,6 @@ function moduleFromProject(project: string | null): number | null {
   const raw = /CC\s*0*(\d{1,2})/i.exec(project ?? "")?.[1];
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-/** Semana atual = quantas semanas se passaram desde a segunda da Semana 01.
- *
- *  Uma data conhecida basta para ancorar a régua, porque as semanas do Adalove
- *  são consecutivas e numeradas: da semana ancorada volta-se `num - 1` semanas
- *  para achar a origem. Assim uma semana sem encontro (recesso, semana só de
- *  autoestudo) não deixa buraco na conta.
- *
- *  `now` entra como data pura em UTC, igual ao resto de lib/date.ts: as datas do
- *  /userdata são meia-noite UTC, e comparar com o horário local faria a semana
- *  virar algumas horas adiantada. */
-function currentWeek(view: SectionView, now: Date): { week: number; total: number } | null {
-  const total = view.weeks.length;
-  if (total === 0) return null;
-
-  let origin: number | null = null;
-  for (const w of view.weeks) {
-    const first = w.activities
-      .map((a) => a.date)
-      .filter((d): d is string => !!d)
-      .sort()[0];
-    const monday = first ? startOfWeek(first) : null;
-    if (monday) {
-      origin = Date.parse(monday) - (w.num - 1) * WEEK;
-      break;
-    }
-  }
-  if (origin === null) return null;
-
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const elapsed = Math.floor((today - origin) / WEEK) + 1;
-  return { week: Math.min(Math.max(elapsed, 1), total), total };
 }
 
 function SectionRowButton({
