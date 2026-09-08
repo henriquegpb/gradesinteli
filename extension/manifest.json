@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Adalove Modern UI",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "Interface moderna para o Adalove: notas, faltas, simulador de médias, atividades e turmas passadas num painel só.",
   "icons": {
     "16": "icons/icon16.png",
