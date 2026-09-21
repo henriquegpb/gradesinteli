@@ -28,7 +28,8 @@ import { STATUS_DONE, STATUS_LABEL, type ActivityStatus } from "~/data/types";
 import type { ActivityView, SectionView } from "~/data/viewmodel";
 import { cn } from "~/lib/cn";
 import { formatDate } from "~/lib/date";
-import { sanitizeHtml } from "~/lib/sanitize";
+import { gradeColor } from "~/lib/grade";
+import { sanitizeHtml, sanitizeTextOrHtml } from "~/lib/sanitize";
 import { Badge } from "~/ui/Badge";
 import { Button } from "~/ui/Button";
 import { Modal } from "~/ui/Modal";
@@ -98,7 +99,10 @@ const CLAMP_PX = 232;
 
 /** Conteúdo do Adalove com "Ver mais", igual ao deles. O corte é medido, não
  *  chutado por contagem de caracteres: o HTML tem listas, títulos e imagens, e
- *  contar caracteres erraria feio. */
+ *  contar caracteres erraria feio.
+ *
+ *  Aceita HTML ou texto puro: enunciado e descrição vêm marcados, feedback e
+ *  resposta nem sempre. */
 function Html({ html }: { html: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -106,7 +110,7 @@ function Html({ html }: { html: string }) {
   // Altura do corte arredondada para baixo até fechar uma linha inteira. Cortar
   // na altura crua deixava meia linha de letras aparecendo na borda.
   const [clampPx, setClampPx] = useState(CLAMP_PX);
-  const sanitized = useMemo(() => sanitizeHtml(html), [html]);
+  const sanitized = useMemo(() => sanitizeTextOrHtml(html), [html]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -336,7 +340,14 @@ function AnswerEditor({
 
   // O conteúdo é do DOM, não do React: reconciliar innerHTML a cada tecla
   // mataria o cursor. O React só o escreve ao trocar de atividade.
-  const initial = useMemo(() => sanitizeHtml(activity.answer ?? ""), [activity.answer, activity.id]);
+  //
+  // `TextOrHtml` porque nem toda resposta salva é HTML: a que veio de fora do
+  // editor rico chega como texto, e sem converter as quebras ela abriria aqui
+  // como um parágrafo só.
+  const initial = useMemo(
+    () => sanitizeTextOrHtml(activity.answer ?? ""),
+    [activity.answer, activity.id],
+  );
   const savedRef = useRef(initial);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // `onSave` vem do App e muda de identidade a cada render dele; guardar em ref
@@ -389,7 +400,7 @@ function AnswerEditor({
       // que é justamente quando o indicador não está mais na tela.
       toast.success("Resposta salva com sucesso!");
     } catch (error) {
-      savedRef.current = " não salvo";
+      savedRef.current = "\u0000não salvo";
       setState("error");
       toast.error(
         error instanceof Error
@@ -481,9 +492,11 @@ function AnswerEditor({
         data-placeholder="Escreva sua resposta…"
         onInput={onInput}
         onBlur={() => void flush()}
-        // Inline e não em classe: uma regra herdada da página (`user-select:none`
-        // no body do Adalove) ganharia de uma folha do shadow root, e o campo
-        // ficaria sem cursor. Inline, nada da página alcança.
+        // Fica como cinto e suspensório contra o `user-select:none` do body do
+        // Adalove — `hideOriginalUi` (mount.tsx) já solta a raiz da página. O
+        // `-webkit-user-modify` é o que importa aqui: é ele que garante o status
+        // de elemento editável, a única exceção da regra do css-ui que propaga
+        // `none` para todos os descendentes, e sem ele o campo ficava sem cursor.
         style={{ userSelect: "text", WebkitUserSelect: "text", WebkitUserModify: "read-write" }}
         className={cn(
           "adalove-prose mt-1.5 min-h-24 w-full rounded-control px-2 py-1.5 text-sm leading-relaxed",
@@ -559,18 +572,37 @@ export function ActivityModal({
         </span>
       }
       subtitle={`${activity.kind.name} · ${activity.week}`}
-      footer={
-        <div className="space-y-3">
-          {canMove && <MoveCard activity={activity} view={view} onMove={onMove!} />}
-          <div
-            className={cn(
-              "flex flex-wrap items-center justify-between gap-3",
-              canMove && "border-t border-line-soft pt-3",
-            )}
-          >
-            <span className="text-xs text-fg-soft">Explicar com IA</span>
-            <AskAiButtons activity={activity} view={view} />
+      // A nota no cabeçalho, e não só na aba de Avaliação: num cartão já
+      // corrigido ela é o que a pessoa abriu o cartão para ver, e estava a dois
+      // cliques de distância. Continua também na aba, junto do enunciado e da
+      // resposta.
+      //
+      // Encostada no nome, e o fio vertical separando os dois campos. Os dois
+      // `self-stretch` são o que dá ao fio a altura do bloco de identificação
+      // inteiro (título E subtítulo) sem número fixo: o de fora faz o bloco
+      // ocupar a altura da linha, o de dentro estica o fio dentro dele.
+      titleAside={
+        activity.evaluated ? (
+          <div className="flex shrink-0 items-center gap-3 self-stretch">
+            <span aria-hidden className="w-px self-stretch bg-line" />
+            <div>
+              <div
+                className="font-mono text-2xl font-medium leading-none tracking-tight tabular"
+                style={{ color: gradeColor(activity.grade) }}
+              >
+                {fmtNota(activity.grade)}
+              </div>
+              <div className="mt-1 text-[0.55rem] uppercase tracking-[0.04em] text-fg-muted">
+                Avaliação
+              </div>
+            </div>
           </div>
+        ) : null
+      }
+      footer={
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs text-fg-soft">Explicar com IA</span>
+          <AskAiButtons activity={activity} view={view} />
         </div>
       }
     >
@@ -726,7 +758,12 @@ export function ActivityModal({
             <div className="border-t border-line-soft pt-3 text-sm">
               <span className="text-fg-muted">Avaliação: </span>
               {activity.evaluated ? (
-                <span className="font-mono text-fg tabular">{fmtNota(activity.grade)}</span>
+                <span
+                  className="font-mono tabular"
+                  style={{ color: gradeColor(activity.grade) }}
+                >
+                  {fmtNota(activity.grade)}
+                </span>
               ) : (
                 <span className="text-fg-soft">Sem avaliação até o momento</span>
               )}
@@ -820,6 +857,14 @@ export function ActivityModal({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Dentro da rolagem, e não no rodapé fixo: o controle ocupa duas linhas
+            e comia a altura útil do conteúdo em todas as abas. */}
+        {canMove && (
+          <div className="border-t border-line-soft pt-4">
+            <MoveCard activity={activity} view={view} onMove={onMove!} />
           </div>
         )}
       </div>

@@ -83,6 +83,37 @@ export function isOverlayPath(pathname = location.pathname): boolean {
   return routeForPath(pathname) !== null;
 }
 
+/** Onde o `adalove-boot.js` deixa o caminho sintético que o navegador pediu.
+ *  Duplicada lá como string literal: aquele arquivo roda em document_start, sem
+ *  bundler e antes de qualquer import. */
+const BOOT_PATH_KEY = "gi:boot-path";
+
+/** Devolve à barra de endereço o caminho sintético que o carregamento pediu.
+ *
+ *  Os sintéticos (`/academic-life/atividades`, `/academic-life/grupo`) não
+ *  existem para o Adalove, e o `adalove-boot.js` os troca pelo caminho real em
+ *  document_start justamente para o react-router deles não desviar para
+ *  `/not-found` — o que fazia um F5 no kanban abrir a overlay no 404.
+ *
+ *  Aqui, já em document_idle, o endereço volta ao que era. `replaceState` não
+ *  acorda o router do Adalove, então nada é redesenhado do lado deles.
+ *
+ *  Uma vez por carregamento: a chave é consumida na leitura. */
+export function restoreSyntheticPath(): void {
+  let requested: string | null = null;
+  try {
+    requested = sessionStorage.getItem(BOOT_PATH_KEY);
+    sessionStorage.removeItem(BOOT_PATH_KEY);
+  } catch {
+    return;
+  }
+
+  if (!requested || !requested.startsWith(`${SYNTHETIC_FALLBACK}/`)) return;
+  if (normalize(location.pathname) === normalize(requested)) return;
+
+  history.replaceState(history.state, "", requested + location.search + location.hash);
+}
+
 /** Endereço do Adalove correspondente — o próprio, quando ele é real, ou o da
  *  Vida Acadêmica quando é um sintético nosso. Usado ao voltar para a UI
  *  original: o Adalove não sabe renderizar `/academic-life/atividades`. */

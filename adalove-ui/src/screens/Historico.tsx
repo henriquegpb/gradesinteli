@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { useApi } from "~/data/api";
 import { cn } from "~/lib/cn";
 import { formatDate } from "~/lib/date";
+import { gradeColor } from "~/lib/grade";
 import { Badge } from "~/ui/Badge";
 import { Card } from "~/ui/Card";
 import { SkeletonStats, SkeletonTable } from "~/ui/Skeleton";
@@ -45,14 +46,6 @@ function num(value: unknown): number | null {
   if (value == null) return null;
   const n = Number(String(value).replace(",", "."));
   return Number.isNaN(n) ? null : n;
-}
-
-function gradeColor(grade: number | null): string {
-  if (grade == null) return "var(--color-fg-muted)";
-  if (grade >= 9) return "var(--color-green)";
-  if (grade >= 7) return "var(--color-blue)";
-  if (grade >= 6) return "var(--color-yellow)";
-  return "var(--color-red)";
 }
 
 function statusTone(status: string | null): "positive" | "negative" | "default" {

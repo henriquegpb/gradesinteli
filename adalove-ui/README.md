@@ -26,6 +26,7 @@ Parâmetros do harness:
 | `?route=notas` | abre direto numa tela (`overview`, `atividades`, `notas`, `faltas`, `grupo`) |
 | `?open=3` | abre o modal do n-ésimo card |
 | `?fail=1` | faz o `persistStatus` falhar, para exercitar o rollback do kanban |
+| `?expired=1` | finge sessão do Adalove vencida, para ver a faixa de sessão expirada |
 
 ## Rotas
 

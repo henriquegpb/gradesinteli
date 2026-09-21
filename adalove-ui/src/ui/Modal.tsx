@@ -12,6 +12,7 @@ export function Modal({
   subtitle,
   icon,
   children,
+  titleAside,
   footer,
   className,
 }: {
@@ -21,6 +22,11 @@ export function Modal({
   subtitle?: ReactNode;
   icon?: ReactNode;
   children: ReactNode;
+  /** Encostado no bloco de identificação (ícone, título, subtítulo), à direita
+   *  dele. Para um segundo campo da primeira linha — a nota de uma atividade
+   *  corrigida. Fica DENTRO do bloco, e não no canto do cabeçalho, para o
+   *  divisor separar os dois campos em vez de flutuar longe do que divide. */
+  titleAside?: ReactNode;
   footer?: ReactNode;
   className?: string;
 }) {
@@ -63,6 +69,7 @@ export function Modal({
                 <div className="mt-0.5 text-xs text-fg-muted">{subtitle}</div>
               ) : null}
             </div>
+            {titleAside}
           </div>
           <button
             type="button"

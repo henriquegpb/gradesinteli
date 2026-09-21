@@ -99,6 +99,52 @@ export function getToken(): string | null {
   return readLocal(TOKEN_KEY);
 }
 
+/** Uma frase só para a sessão vencida, em todo lugar: é a mesma situação e o
+ *  mesmo remédio, e o aluno não precisa decorar dois textos para o mesmo
+ *  problema. Recarregar basta porque o Adalove renova a sessão no carregamento
+ *  — só quando o refresh também venceu é que a tela de entrada aparece. */
+export const SESSION_EXPIRED_MESSAGE =
+  "Sua sessão do Adalove expirou. Recarregue a página para continuar.";
+
+/** Quando o token expira, em ms de epoch, lido do claim `exp` do próprio JWT —
+ *  sem rede. `null` quando não há token ou o formato não é o esperado: aí não
+ *  dá para afirmar nada, e quem chama segue pelo caminho normal. */
+export function tokenExpiresAt(): number | null {
+  const payload = getToken()?.split(".")[1];
+  if (!payload) return null;
+
+  try {
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const exp = (
+      JSON.parse(atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4))) as { exp?: unknown }
+    ).exp;
+    return typeof exp === "number" ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sessão vencida, ou a ponto de vencer.
+ *
+ *  A folga cobre o tempo de voo: um token que expira em dois segundos chega
+ *  expirado do outro lado, e o erro que volta daí é pior de ler do que o aviso
+ *  que damos antes de pedir. */
+export function sessionExpired(skewMs = 5_000): boolean {
+  const at = tokenExpiresAt();
+  return at !== null && Date.now() + skewMs >= at;
+}
+
+/** A API do Adalove não é consistente com sessão velha: `/status` de uma
+ *  atividade responde **400**, não 401 — deixar um card parado numa aba aberta
+ *  e tentar movê-lo era exatamente isso, e o aluno lia "Adalove respondeu 400"
+ *  sem ter como saber que bastava recarregar. Quando o corpo fala de token, o
+ *  código de status não é a melhor fonte. */
+const AUTH_HINT = /token|jwt|unauthor|expir|credential|not authenticated|sess(ao|ão|ion)/i;
+
+function looksLikeAuthFailure(status: number, body: string): boolean {
+  return (status === 400 || status === 422) && AUTH_HINT.test(body);
+}
+
 /** O que o logout do Adalove NÃO apaga. A lista é literalmente a deles (o
  *  `logout` do bundle guarda estes valores, chama `localStorage.clear()` e os
  *  devolve): preferência de menu, idioma, tour, tema e — o que mais importa
@@ -178,6 +224,11 @@ async function adaloveFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new AdaloveAuthError("Sessão do Adalove não encontrada. Faça login novamente.");
   }
 
+  // Antes de pedir: numa aba esquecida aberta o token já venceu, e o que volta
+  // da API nesse caso vai de 401 a 400 dependendo do endpoint. O `exp` do
+  // próprio token responde na hora e sem ambiguidade.
+  if (sessionExpired()) throw new AdaloveAuthError(SESSION_EXPIRED_MESSAGE);
+
   const mfa = readLocal(MFA_KEY);
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -190,9 +241,15 @@ async function adaloveFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (res.status === 401 || res.status === 403) {
-    throw new AdaloveAuthError("Sessão expirada. Recarregue o Adalove.");
+    throw new AdaloveAuthError(SESSION_EXPIRED_MESSAGE);
   }
   if (!res.ok) {
+    // O corpo do erro é lido antes de desistir: é ele que separa uma sessão
+    // velha de uma recusa de verdade quando o status é 400.
+    const detail = await res.text().catch(() => "");
+    if (looksLikeAuthFailure(res.status, detail)) {
+      throw new AdaloveAuthError(SESSION_EXPIRED_MESSAGE);
+    }
     throw new Error(`Adalove respondeu ${res.status} em ${path}`);
   }
 

@@ -71,6 +71,10 @@ const devApi: ApiClient = {
   put: async () => {
     await new Promise((r) => setTimeout(r, 200));
   },
+  // Aqui não existe sessão para vencer, então `?expired=1` é o que põe a faixa
+  // de sessão expirada na tela — do contrário ela só apareceria numa aba do
+  // Adalove esquecida aberta por uma hora.
+  sessionExpired: () => new URLSearchParams(location.search).has("expired"),
 };
 
 /** Monta o usuário a partir do fixture de /users/details, quando existe. */

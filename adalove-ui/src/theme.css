@@ -22,7 +22,7 @@
   --color-fg-soft: #a0a0aa;
   --color-fg-muted: #5c5c66;
 
-  --color-accent: #6e7bf2;
+  --color-accent: #2686ff;
   --color-blue: #6e9bf2;
   --color-green: #50c878;
   --color-orange: #e8964a;
@@ -55,7 +55,7 @@
   --text-primary: #e0e0e4;
   --text-secondary: #a0a0aa;
   --text-muted: #5c5c66;
-  --accent: #6e7bf2;
+  --accent: #2686ff;
   --color-ponderada: #ff6300;
   --color-artefato: #00a995;
   --color-prova: #f551ee;
@@ -76,7 +76,7 @@
   --color-fg-soft: #4a4a54;
   --color-fg-muted: #8a8a96;
 
-  --color-accent: #5560d9;
+  --color-accent: #0065e6;
   --color-blue: #4a7fd9;
   --color-green: #2e9e5e;
   --color-orange: #c07838;
@@ -94,7 +94,7 @@
   --text-primary: #1a1a1e;
   --text-secondary: #4a4a54;
   --text-muted: #8a8a96;
-  --accent: #5560d9;
+  --accent: #0065e6;
 }
 
 /* ---------------------------------------------------------------------------
@@ -177,10 +177,11 @@
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* `user-select` é herdada, e herança ATRAVESSA o shadow root: um
-       `user-select: none` no body do Adalove chegaria aqui dentro e, no Chrome,
-       impede até o cursor de entrar num campo editável. Reafirmamos na raiz para
-       a overlay não depender do CSS da página que ela cobre. */
+    /* `user-select` é herdada, e herança ATRAVESSA o shadow root. Reafirmar aqui
+       cobre o harness de dev, mas NÃO resolve sozinho na extensão: pelo css-ui,
+       um elemento cujo pai tem valor usado `none` também usa `none`, dê o que der
+       na folha do shadow root. Contra o `user-select:none` do body do Adalove
+       quem age é `hideOriginalUi` (mount.tsx), na raiz da página. */
     user-select: text;
     -webkit-user-select: text;
   }

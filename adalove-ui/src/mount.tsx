@@ -18,6 +18,7 @@ import {
   putActivityAnswer,
   putActivityStatus,
   resolveSectionUuid,
+  sessionExpired,
 } from "~/data/client";
 import { Login } from "~/screens/Login";
 import type { ApiClient } from "~/data/api";
@@ -26,13 +27,14 @@ import { ensureFonts } from "~/lib/fonts";
 import { ext } from "~/lib/ext";
 import cssText from "~/theme.css?inline";
 import { historyDirty } from "~/shell/history";
-import { canonicalPath, isOverlayPath } from "~/shell/routes";
+import { canonicalPath, isOverlayPath, restoreSyntheticPath } from "~/shell/routes";
 import { SkeletonShell } from "~/ui/Skeleton";
 
 /** Na extensão as telas novas batem direto na apiv2, com o token da página. */
 const API: ApiClient = {
   get: (path) => adaloveGet(path),
   put: (path, body) => adalovePut(path, body),
+  sessionExpired: () => sessionExpired(),
 };
 
 const HOST_ID = "gradesinteli-adalove-ui";
@@ -160,6 +162,16 @@ function hideOriginalUi() {
   style.textContent = [
     "#root{display:none!important}",
     "html,body{overflow:visible!important;height:auto!important;max-height:none!important;margin:0!important;background:#0e0e10!important;overscroll-behavior:none!important}",
+    // `user-select` NÃO se recupera de um `none` em ancestral: pelo css-ui, se o
+    // valor usado no pai é `none`, o do filho é `none` também — não importa o que
+    // a folha do shadow root diga. O body do Adalove usa `user-select:none`, e a
+    // herança atravessa o shadow root, então o texto inteiro da overlay ficava
+    // sem seleção: o feedback do professor não dava para copiar. A única exceção
+    // da regra é elemento editável, que é por que só o campo de resposta escapava.
+    //
+    // Soltar aqui, na raiz da PÁGINA, é o que resolve; o `user-select:text` do
+    // `.adalove-ui-root` (theme.css) nunca teve como alcançar.
+    "html,body{user-select:text!important;-webkit-user-select:text!important}",
     // O botão "Abrir no GradesInteli" é do fluxo antigo (adalove-content.js).
     // Com a UI nova ativa ele não faz sentido — a importação de notas é para
     // quem está na UI original —, então some por CSS e volta sozinho ao sair,
@@ -454,6 +466,12 @@ function watchRoute() {
 }
 
 async function boot() {
+  // Antes de ler a rota: o `adalove-boot.js` tirou o caminho sintético da barra
+  // de endereço em document_start para o Adalove não desviar para /not-found, e
+  // é aqui que ele volta. Sem isto a overlay abriria na Visão geral (ou no 404)
+  // em vez do kanban que a pessoa recarregou.
+  restoreSyntheticPath();
+
   // Captura roda em qualquer rota do Adalove: é justamente nas páginas que ainda
   // não reconstruímos que precisamos levantar o contrato.
   await syncToRoute();

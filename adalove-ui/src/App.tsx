@@ -7,7 +7,7 @@ import {
   type SimulacaoConfig,
 } from "@/types/grades";
 import { ApiProvider, useApiClient, type ApiClient } from "~/data/api";
-import type { AdaloveUser } from "~/data/client";
+import { AdaloveAuthError, type AdaloveUser } from "~/data/client";
 import { normalizeNews, type NewsItem } from "~/data/news";
 import { getPref, setPref } from "~/lib/prefs";
 import type { Theme } from "~/shell/HeaderActions";
@@ -29,6 +29,7 @@ import { Perfil } from "~/screens/Perfil";
 import { Simulados } from "~/screens/Simulados";
 import { Overview } from "~/screens/Overview";
 import { Footer } from "~/shell/Footer";
+import { SessionBanner } from "~/shell/SessionBanner";
 import { Sidebar } from "~/shell/Sidebar";
 import type { RouteId } from "~/shell/nav";
 import { onHistoryRoute, pushRoute } from "~/shell/history";
@@ -207,9 +208,42 @@ function Workspace({
   const setRoute = useCallback((next: RouteId) => {
     setRouteState(next);
     pushRoute(next);
+
+    // Tela nova começa do começo. Quem rola é o documento (o host entra no fluxo
+    // normal, ver `createHost` em mount.tsx), e a rolagem não se mexe sozinha na
+    // troca de tela: clicar num card de semana no pé da Visão geral — ou no
+    // título de uma semana no Calendário, que fica ainda mais abaixo — abria o
+    // kanban no meio da página.
+    //
+    // Só aqui, e não no `setRouteState` que o voltar/avançar usa: ali o
+    // navegador restaura a rolagem de onde a pessoa saiu, que é o certo.
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
   useEffect(() => onHistoryRoute(setRouteState), []);
+
+  /** Sessão vencida. Sai de duas fontes, porque uma só sempre chega tarde:
+   *  a sondagem do `exp` do token (sem rede, barata) e a primeira escrita que
+   *  volta como erro de sessão — se o refresh do Adalove morreu antes da hora,
+   *  o `exp` ainda parece bom. */
+  const [sessionDead, setSessionDead] = useState(false);
+
+  useEffect(() => {
+    const expired = client?.sessionExpired;
+    if (!expired) return;
+
+    const check = () => setSessionDead((dead) => dead || expired());
+    check();
+
+    // Voltar para a aba é justamente quando a sessão já morreu, e esperar o
+    // próximo tick deixaria a pessoa clicar antes de ler o aviso.
+    const id = setInterval(check, 30_000);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [client]);
 
   /** Troca a turma carregada — inclusive para uma já encerrada, que é como se
    *  consultam as notas e as faltas dos módulos passados.
@@ -320,6 +354,16 @@ function Workspace({
         .then(() => true)
         .catch((error: unknown) => {
           setActivityStatus(activity.id, previousStatus, previousSort);
+
+          // Sessão vencida não é "não foi possível mover": o movimento estava
+          // certo, a sessão é que não estava. A frase do erro já diz o que
+          // fazer, e a faixa fica na tela depois que o toast sai.
+          if (error instanceof AdaloveAuthError) {
+            setSessionDead(true);
+            toast.error(error.message);
+            return false;
+          }
+
           toast.error(
             error instanceof Error
               ? `Não foi possível mover: ${error.message}`
@@ -379,7 +423,14 @@ function Workspace({
   const handleAnswer = useCallback(
     async (activity: ActivityView, html: string) => {
       if (!persistAnswer) return;
-      await persistAnswer(activity.id, html);
+      try {
+        await persistAnswer(activity.id, html);
+      } catch (error) {
+        // O editor já mostra "Não salvo" e o toast do erro; o que falta é a
+        // faixa, para o aviso não sumir junto com o toast.
+        if (error instanceof AdaloveAuthError) setSessionDead(true);
+        throw error;
+      }
       setRaw((current) => ({
         ...current,
         activities: current.activities.map((a) =>
@@ -413,6 +464,7 @@ function Workspace({
         {/* `flex-1` empurra o rodapé para baixo: em tela curta ele encostava
             no conteúdo, no meio da página. */}
         <div className="mx-auto w-full max-w-[1400px] flex-1">
+        {sessionDead && <SessionBanner onReload={() => location.reload()} />}
         {route === "overview" && (
           <Overview
             view={view}

@@ -8,6 +8,9 @@ export interface ApiClient {
   get: <T>(path: string) => Promise<T>;
   /** Ausente no harness de dev: lá as escritas viram no-op. */
   put?: (path: string, body?: unknown) => Promise<unknown>;
+  /** Se a sessão do Adalove já venceu. Ausente no harness de dev, que não tem
+   *  sessão — e onde a ausência é justamente o que desliga o aviso. */
+  sessionExpired?: () => boolean;
 }
 
 const ApiContext = createContext<ApiClient | null>(null);

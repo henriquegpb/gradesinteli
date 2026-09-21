@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AskAiButtons } from "~/ai/AskAiButton";
 import { axisName, CATEGORY_COLOR } from "~/data/activityTypes";
@@ -208,17 +208,43 @@ function WeekRow({
   week,
   view,
   onOpen,
+  onOpenWeek,
 }: {
   week: WeekAgenda;
   view: SectionView;
   onOpen: (a: ActivityView) => void;
+  onOpenWeek?: (week: string) => void;
 }) {
   const days = week.monday ? Array.from({ length: 7 }, (_, i) => addDays(week.monday!, i)) : [];
 
   return (
     <Card className="overflow-hidden">
       <div className="flex items-baseline justify-between gap-2 px-3 py-2.5">
-        <CardTitle>{week.label}</CardTitle>
+        {/* O botão vai DENTRO do `h2`, e não o contrário: `<button>` não aceita
+            um título como conteúdo, e assim o cabeçalho continua sendo
+            cabeçalho para quem navega por eles. */}
+        <CardTitle>
+          {onOpenWeek ? (
+            <button
+              type="button"
+              onClick={() => onOpenWeek(week.label)}
+              title={`Abrir ${week.label} em Minhas atividades`}
+              className="group inline-flex items-center gap-1 transition-colors duration-150 hover:text-fg focus-visible:text-fg focus-visible:outline-none"
+            >
+              {week.label}
+              {/* A seta mora aqui em vez de aparecer no hover: um alvo clicável
+                  que só se anuncia quando o mouse chega não é encontrado por
+                  quem não passa o mouse ali. */}
+              <ChevronRight
+                size={11}
+                aria-hidden
+                className="transition-transform duration-150 group-hover:translate-x-0.5"
+              />
+            </button>
+          ) : (
+            week.label
+          )}
+        </CardTitle>
         <span className="font-mono text-[0.62rem] text-fg-muted tabular">
           {week.dated} {week.dated === 1 ? "encontro" : "encontros"}
         </span>
@@ -257,9 +283,12 @@ function WeekRow({
 export function Calendario({
   view,
   onOpen,
+  onOpenWeek,
 }: {
   view: SectionView;
   onOpen: (a: ActivityView) => void;
+  /** Abre a semana no kanban. Ausente => o título da semana não é clicável. */
+  onOpenWeek?: (week: string) => void;
 }) {
   const weeks = useMemo<WeekAgenda[]>(() => {
     return view.weeks.map((week) => {
@@ -337,7 +366,7 @@ export function Calendario({
             ref={week.label === currentWeekLabel ? currentWeekRef : undefined}
             className="scroll-mt-6"
           >
-            <WeekRow week={week} view={view} onOpen={onOpen} />
+            <WeekRow week={week} view={view} onOpen={onOpen} onOpenWeek={onOpenWeek} />
           </div>
         ))}
       </div>

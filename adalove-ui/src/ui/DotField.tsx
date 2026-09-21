@@ -43,7 +43,7 @@ function readColor(el: HTMLElement, name: string, fallback: string): string {
   return value || fallback;
 }
 
-/** `#6e7bf2` → `110,123,242`, para entrar em `rgba()` com alfa variável. Aceita
+/** `#2686ff` → `38,134,255`, para entrar em `rgba()` com alfa variável. Aceita
  *  também a forma já em `rgb()`, caso o tema mude de notação. */
 function toRgb(color: string): string {
   const hex = /^#([\da-f]{3}|[\da-f]{6})$/i.exec(color)?.[1];
@@ -53,7 +53,7 @@ function toRgb(color: string): string {
     return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
   }
   const parts = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(color);
-  return parts ? `${parts[1]},${parts[2]},${parts[3]}` : "110,123,242";
+  return parts ? `${parts[1]},${parts[2]},${parts[3]}` : "38,134,255";
 }
 
 export function DotField({ className }: { className?: string }) {
@@ -66,7 +66,7 @@ export function DotField({ className }: { className?: string }) {
 
     const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-    const accent = toRgb(readColor(canvas, "--color-accent", "#6e7bf2"));
+    const accent = toRgb(readColor(canvas, "--color-accent", "#2686ff"));
     const muted = toRgb(readColor(canvas, "--color-fg-muted", "#6b6b78"));
 
     let dots: Dot[] = [];

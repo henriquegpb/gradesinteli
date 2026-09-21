@@ -5,7 +5,9 @@ import type { ActivityView, SectionView } from "~/data/viewmodel";
 
 const MAX_DESCRIPTION_CHARS = 1500;
 
-function truncate(text: string, max: number): string {
+/** Corta no fim de frase quando dá, para o enunciado não terminar no meio de uma
+ *  palavra — a IA lê melhor e o aluno também, quando confere o prompt. */
+export function truncate(text: string, max: number): string {
   const clean = text.trim().replace(/\s+/g, " ");
   if (clean.length <= max) return clean;
   const cut = clean.slice(0, max);

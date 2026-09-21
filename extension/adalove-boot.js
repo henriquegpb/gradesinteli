@@ -39,6 +39,39 @@
   ];
 
   var path = location.pathname.replace(/\/+$/, "") || "/";
+
+  // `/academic-life/atividades` e `/academic-life/grupo` são endereços NOSSOS: o
+  // kanban e o grupo moram dentro da Vida Acadêmica e não existem no Adalove.
+  // O react-router deles não conhece esses caminhos e desvia para `/not-found`
+  // assim que monta — antes do document_idle, quando a overlay sobe. Era por
+  // isso que dar F5 no kanban (com ou sem cartão aberto) caía na página de "não
+  // encontrada": a overlay já nascia lendo /not-found da barra de endereço.
+  //
+  // Aqui é document_start e é síncrono, então rodamos ANTES de qualquer script
+  // da página: devolvemos o caminho real, que o React deles sabe renderizar, e
+  // deixamos o pedido guardado para o mount.tsx recolocar o endereço no lugar.
+  // Sem depender de corrida e sem o desvio chegar a acontecer.
+  if (path.indexOf("/academic-life/") === 0) {
+    try {
+      sessionStorage.setItem("gi:boot-path", path);
+    } catch (e) {
+      /* storage bloqueado: no pior caso volta o 404 de antes */
+    }
+    // Query e hash seguem junto: são da pessoa, não nossos, e o caminho volta
+    // ao que era no document_idle.
+    history.replaceState(history.state, "", "/academic-life" + location.search + location.hash);
+    path = "/academic-life";
+  } else {
+    // O valor é de UM carregamento só. Sem limpar, um /not-found de verdade
+    // (link quebrado, endereço digitado errado) seria "restaurado" para o
+    // kanban da última vez que esta aba carregou.
+    try {
+      sessionStorage.removeItem("gi:boot-path");
+    } catch (e) {
+      /* idem */
+    }
+  }
+
   var covered =
     OVERLAY_PATHS.indexOf(path) >= 0 ||
     path.indexOf("/academic-life/") === 0 ||

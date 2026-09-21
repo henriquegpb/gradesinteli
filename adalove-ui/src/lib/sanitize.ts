@@ -37,6 +37,26 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
+/** Uma tag de verdade, e não um "<" solto do texto — um `P(x) < 1` do enunciado
+ *  não pode passar por marcação. Só as tags que o conteúdo do Adalove usa. */
+const HTML_TAG =
+  /<\/?(?:p|div|br|hr|ul|ol|li|h[1-6]|table|thead|tbody|tr|t[hd]|a|img|strong|b|em|i|u|s|span|pre|code|blockquote|figure|sub|sup)\b[^>]*>/i;
+
+/** Nem todo campo do Adalove vem como HTML. O feedback do professor costuma ser
+ *  TEXTO puro, com as quebras de linha carregando toda a estrutura — a
+ *  devolutiva de um desafio traz uma linha por questão. Num innerHTML cada `\n`
+ *  vira um espaço e o feedback inteiro sai num parágrafo só, que é como a
+ *  correção de oito questões virava um bloco ilegível.
+ *
+ *  Sem marcação, o texto é escapado e as quebras viram `<br>`. */
+export function sanitizeTextOrHtml(value: string): string {
+  if (HTML_TAG.test(value)) return sanitizeHtml(value);
+  const div = document.createElement("div");
+  // `textContent` escapa &, < e > de graça; sobra converter as quebras.
+  div.textContent = value.trim();
+  return div.innerHTML.replace(/\r\n|\r|\n/g, "<br>");
+}
+
 export function sanitizeHtml(html: string): string {
   const doc = new DOMParser().parseFromString(html, "text/html");
 

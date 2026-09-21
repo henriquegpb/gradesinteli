@@ -2,6 +2,7 @@ import { ArrowLeft, Check, Copy, Download, FileText, Loader2 } from "lucide-reac
 import { useState } from "react";
 import { useApi } from "~/data/api";
 import { downloadBankSlip } from "~/data/client";
+import { BANK_SLIPS_PATH, money, parseAmount, type BankSlip } from "~/data/finance";
 import { formatDate } from "~/lib/date";
 import { copyText } from "~/lib/prefs";
 import { Badge } from "~/ui/Badge";
@@ -11,16 +12,6 @@ import { Table, TableContainer, Td, Th } from "~/ui/Table";
 import { Tabs } from "~/ui/Tabs";
 import { useToast } from "~/ui/Toast";
 
-interface BankSlip {
-  reference: string | null;
-  digitableLine: string | null;
-  bankSlipId: string | number | null;
-  dueDate: string | null;
-  dueDateBR: string | null;
-  referenceNumber: string | number | null;
-  amount: string | number | null;
-}
-
 interface Invoice {
   invoice_id: string | number | null;
   nfse_number: string | number | null;
@@ -28,13 +19,6 @@ interface Invoice {
   service_amount: string | number | null;
   service_details: string | null;
   invoice_url: string | null;
-}
-
-function money(value: string | number | null | undefined): string {
-  if (value == null) return "—";
-  const n = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-  if (Number.isNaN(n)) return String(value);
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function CopyLine({ line }: { line: string | null }) {
@@ -217,9 +201,7 @@ type Tab = "abertos" | "pagos" | "notas";
 
 export function Financeiro({ onBack }: { onBack?: () => void }) {
   const [tab, setTab] = useState<Tab>("abertos");
-  const slips = useApi<{ pendingSlips: BankSlip[]; paidSlips: BankSlip[] }>(
-    "/students/btgpactual/bank-slips",
-  );
+  const slips = useApi<{ pendingSlips: BankSlip[]; paidSlips: BankSlip[] }>(BANK_SLIPS_PATH);
   const invoices = useApi<{ invoices: Invoice[] }>("/students/invoices");
 
   const pending = slips.data?.pendingSlips ?? [];
@@ -227,10 +209,7 @@ export function Financeiro({ onBack }: { onBack?: () => void }) {
   const loading = slips.loading || invoices.loading;
   const error = slips.error ?? invoices.error;
 
-  const pendingTotal = pending.reduce((sum, s) => {
-    const n = Number(String(s.amount ?? 0).replace(",", "."));
-    return sum + (Number.isNaN(n) ? 0 : n);
-  }, 0);
+  const pendingTotal = pending.reduce((sum, s) => sum + (parseAmount(s.amount) ?? 0), 0);
 
   return (
     <div className="space-y-4">

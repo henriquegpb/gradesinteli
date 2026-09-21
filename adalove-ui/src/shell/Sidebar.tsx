@@ -4,12 +4,16 @@ import {
   LogOut,
   PanelLeftClose,
   Plus,
+  TriangleAlert,
   Undo2,
   User,
+  X,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { AdaloveUser } from "~/data/client";
+import { usePendingSlips } from "~/data/finance";
 import { cn } from "~/lib/cn";
+import { getPref, setPref } from "~/lib/prefs";
 import { Avatar } from "~/ui/Avatar";
 import {
   ADALOVE_LINKS,
@@ -20,6 +24,9 @@ import {
   type NavItem,
   type RouteId,
 } from "~/shell/nav";
+
+/** Guarda quais boletos em aberto já foram dispensados no aviso da Sidebar. */
+const SLIPS_DISMISSED_PREF = "boletoAvisoDispensado";
 
 function AdaloveLinkRow({ link, open }: { link: AdaloveLink; open: boolean }) {
   const Icon = link.icon;
@@ -186,10 +193,44 @@ export function Sidebar({
 
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? null;
 
+  // Boleto em aberto: o ponto na linha de Financeiro e o aviso no rodapé saem
+  // daqui. Sem nada em aberto, a lista fica vazia e nenhum dos dois aparece.
+  const pendingSlips = usePendingSlips();
+
+  // Dispensar guarda a ASSINATURA do conjunto em aberto, não um "não mostrar
+  // mais": boleto novo (ou um segundo) muda a assinatura e o aviso volta.
+  // Silenciar para sempre um alerta de dinheiro a pagar sairia caro.
+  const slipsKey = pendingSlips
+    .map((s) => String(s.bankSlipId ?? s.reference ?? ""))
+    .sort()
+    .join("|");
+
+  const [dismissedSlips, setDismissedSlips] = useState<string | null>(null);
+  const [dismissLoaded, setDismissLoaded] = useState(false);
+
+  useEffect(() => {
+    void getPref(SLIPS_DISMISSED_PREF).then((value) => {
+      setDismissedSlips(value);
+      setDismissLoaded(true);
+    });
+  }, []);
+
+  // O portão do `dismissLoaded` evita o pisca: sem ele o aviso apareceria no
+  // primeiro render e sumiria quando a preferência voltasse do storage.
+  const slipAlert = dismissLoaded && slipsKey !== "" && dismissedSlips !== slipsKey;
+
+  const dismissSlipAlert = () => {
+    setDismissedSlips(slipsKey);
+    void setPref(SLIPS_DISMISSED_PREF, slipsKey);
+  };
+
   const renderItem = (item: NavItem) => {
     const Icon = item.icon;
     const active = navRoute === item.id;
     const index = NAV_ITEMS.findIndex((i) => i.id === item.id);
+    // O ponto diz "tem algo aqui dentro" sem dizer quanto: o número mora na
+    // tela, e um contador na linha competiria com o aviso do rodapé.
+    const alert = item.id === "financeiro" && slipAlert;
     return (
       <button
         key={item.id}
@@ -201,13 +242,28 @@ export function Sidebar({
         title={open ? undefined : item.label}
         onClick={() => onRoute(item.id)}
         className={cn(
-          "flex h-9 w-full items-center rounded-control text-sm transition-colors duration-150",
+          "relative flex h-9 w-full items-center rounded-control text-sm transition-colors duration-150",
           open ? "gap-2 px-3" : "justify-center px-0",
           active ? "bg-surface-hover text-fg" : "text-fg-soft hover:bg-surface-hover hover:text-fg",
         )}
       >
         <Icon size={16} aria-hidden className={active ? "" : "opacity-50"} />
         <span className={open ? "min-w-0 truncate" : "sr-only"}>{item.label}</span>
+        {alert && (
+          <>
+            {/* Recolhida, a linha é só o ícone centralizado e não há "direita"
+                da linha para encostar: o ponto vira marca no canto do ícone,
+                igual ao contador do sino. */}
+            <span
+              aria-hidden
+              className={cn(
+                "size-1.5 shrink-0 rounded-full bg-orange",
+                open ? "ml-auto" : "absolute right-2.5 top-2.5",
+              )}
+            />
+            <span className="sr-only">(boleto em aberto)</span>
+          </>
+        )}
       </button>
     );
   };
@@ -330,7 +386,11 @@ export function Sidebar({
           <span
             ref={barRef}
             aria-hidden
-            className="pointer-events-none absolute left-0 w-0.5 rounded-sm bg-fg transition-[top,height] ease-[cubic-bezier(.4,0,.2,1)]"
+            // `z-10` porque as linhas são `relative` (o ponto de boleto em
+            // aberto precisa de âncora com a sidebar recolhida): entre elementos
+            // posicionados quem pinta por cima é o último do documento, e a
+            // barra vem antes — sem o z-index ela ficava ATRÁS das linhas.
+            className="pointer-events-none absolute left-0 z-10 w-0.5 rounded-sm bg-fg transition-[top,height] ease-[cubic-bezier(.4,0,.2,1)]"
             style={{ boxShadow: "2px 0 5px rgba(237,237,237,.8), 4px 0 11px rgba(237,237,237,.45)" }}
           />
         )}
@@ -381,6 +441,59 @@ export function Sidebar({
       {/* O botão de star vive no header (HeaderActions); duplicá-lo aqui só
           gastava o espaço do rodapé. */}
       <div className="mt-auto space-y-2 pt-4">
+        {/* Acima do "UI original" de propósito: é o último lugar que o olho
+            passa antes de sair da overlay, e boleto vencido é o tipo de coisa
+            que não pode depender de a pessoa abrir a tela certa.
+
+            Clicável, e não só informativo: quem vê o aviso quer a linha
+            digitável, que está a um clique daqui. */}
+        {slipAlert && (
+          // Div com dois botões, e não um botão com um X dentro: botão dentro de
+          // botão é HTML inválido, e o X precisa do clique só para si.
+          <div
+            className={cn(
+              "flex w-full items-center rounded-control border border-orange/40 bg-orange/10 transition-colors duration-150 hover:border-orange",
+              open ? "" : "h-9 justify-center",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => onRoute("financeiro")}
+              title={open ? undefined : "Boleto em aberto"}
+              className={cn(
+                "flex min-w-0 items-center text-left",
+                open ? "flex-1 gap-2.5 py-2 pl-3 pr-1" : "size-full justify-center",
+              )}
+            >
+              <TriangleAlert size={14} aria-hidden className="shrink-0 text-orange" />
+              <span
+                className={cn(
+                  "truncate text-[0.7rem] font-medium text-fg",
+                  open ? "min-w-0" : "sr-only",
+                )}
+              >
+                {pendingSlips.length === 1
+                  ? "Boleto em aberto"
+                  : `${pendingSlips.length} boletos em aberto`}
+              </span>
+            </button>
+
+            {/* Só com a sidebar aberta: recolhida a faixa tem 2rem de largura e
+                não cabem dois alvos de clique. Quem quiser dispensar abre. */}
+            {open && (
+              <button
+                type="button"
+                aria-label="Dispensar aviso de boleto"
+                title="Dispensar aviso"
+                onClick={dismissSlipAlert}
+                className="mr-1.5 flex size-6 shrink-0 items-center justify-center rounded-control text-fg-muted transition-colors duration-150 hover:bg-orange/15 hover:text-fg"
+              >
+                <X size={12} aria-hidden />
+              </button>
+            )}
+          </div>
+        )}
+
         {onExit && (
           <button
             type="button"

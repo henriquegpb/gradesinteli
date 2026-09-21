@@ -583,7 +583,9 @@ export function Overview({
       </div>
 
       {tab === "atividades" && <WeeksOverview view={view} onOpenWeek={onOpenWeek} />}
-      {tab === "calendario" && <Calendario view={view} onOpen={onOpenActivity} />}
+      {tab === "calendario" && (
+        <Calendario view={view} onOpen={onOpenActivity} onOpenWeek={onOpenWeek} />
+      )}
       {tab === "notas" && <Notas view={view} onOpen={onOpenActivity} showHeader={false} />}
       {tab === "faltas" && <Faltas view={view} showHeader={false} />}
 
