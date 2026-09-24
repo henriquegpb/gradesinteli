@@ -134,6 +134,61 @@ export function sessionExpired(skewMs = 5_000): boolean {
   return at !== null && Date.now() + skewMs >= at;
 }
 
+// ---- renovação -------------------------------------------------------------
+//
+// O access token do Cognito vive uma hora. Quem deixa a aba aberta passa desse
+// prazo todo dia — e a sessão NÃO acabou: o refresh token, que dura semanas,
+// está ali do lado, e é com ele que o app do Adalove se renova sozinho. Antes
+// daqui a gente só sabia detectar o vencimento e pedir para recarregar, o que
+// transformava uma renovação de meio segundo num aviso permanente na tela.
+//
+// A renovação em si mora em `~/data/auth` (é conversa com o Cognito). Ela chega
+// aqui injetada para não fazer client ↔ auth se importarem em círculo.
+
+type Refresher = () => Promise<"ok" | "rejected" | "offline">;
+
+let refresher: Refresher | null = null;
+
+/** Liga a renovação. Sem isto (harness de dev) o comportamento é o de antes:
+ *  detecta o vencimento, não renova. */
+export function setTokenRefresher(fn: Refresher | null) {
+  refresher = fn;
+}
+
+/** Margem para renovar ANTES de vencer. Um minuto e meio cobre a leitura de uma
+ *  tela inteira: o token troca no intervalo da sondagem, sem nenhuma chamada
+ *  chegar a falhar. */
+const RENEW_SKEW_MS = 90_000;
+
+/** `unknown` é o caso "não deu para saber" (rede fora): quem chama mantém o que
+ *  já mostrava em vez de anunciar uma morte que não confirmou. */
+export type SessionState = "ok" | "expired" | "unknown";
+
+/** Renovação em voo. Sem isto, a sondagem e uma chamada que caem no mesmo
+ *  instante disparariam dois POSTs para o Cognito — e o segundo gravaria por
+ *  cima do primeiro. */
+let renewing: Promise<SessionState> | null = null;
+
+/** Devolve uma sessão utilizável, renovando se for a hora.
+ *
+ *  Só faz rede quando o token está perto de vencer; no resto do tempo é uma
+ *  leitura de localStorage e uma conta de data. */
+export async function ensureSession(): Promise<SessionState> {
+  if (!getToken()) return "expired";
+  if (!sessionExpired(RENEW_SKEW_MS)) return "ok";
+  if (!refresher) return sessionExpired() ? "expired" : "ok";
+
+  renewing ??= refresher()
+    .then((outcome): SessionState =>
+      outcome === "ok" ? "ok" : outcome === "offline" ? "unknown" : "expired",
+    )
+    .finally(() => {
+      renewing = null;
+    });
+
+  return renewing;
+}
+
 /** A API do Adalove não é consistente com sessão velha: `/status` de uma
  *  atividade responde **400**, não 401 — deixar um card parado numa aba aberta
  *  e tentar movê-lo era exatamente isso, e o aluno lia "Adalove respondeu 400"
@@ -219,15 +274,23 @@ export async function resolveSectionUuid(): Promise<string | null> {
 }
 
 async function adaloveFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getToken();
-  if (!token) {
+  if (!getToken()) {
     throw new AdaloveAuthError("Sessão do Adalove não encontrada. Faça login novamente.");
   }
 
   // Antes de pedir: numa aba esquecida aberta o token já venceu, e o que volta
-  // da API nesse caso vai de 401 a 400 dependendo do endpoint. O `exp` do
-  // próprio token responde na hora e sem ambiguidade.
-  if (sessionExpired()) throw new AdaloveAuthError(SESSION_EXPIRED_MESSAGE);
+  // da API nesse caso vai de 401 a 400 dependendo do endpoint. Só que vencido
+  // não quer dizer acabado — primeiro tentamos renovar, e só desistimos quando
+  // o Cognito também recusa.
+  if ((await ensureSession()) === "expired") {
+    throw new AdaloveAuthError(SESSION_EXPIRED_MESSAGE);
+  }
+
+  // Depois do `ensureSession`: se houve renovação, o token daqui é o novo.
+  const token = getToken();
+  if (!token) {
+    throw new AdaloveAuthError("Sessão do Adalove não encontrada. Faça login novamente.");
+  }
 
   const mfa = readLocal(MFA_KEY);
   const res = await fetch(`${API_BASE}${path}`, {

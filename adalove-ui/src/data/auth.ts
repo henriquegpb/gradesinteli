@@ -167,12 +167,74 @@ function cacheSession(username: string, session: CognitoSession) {
   localStorage.setItem(`${CACHE_PREFIX}.${username}.clockDrift`, "0");
 }
 
+function lastAuthUser(): string | null {
+  try {
+    return localStorage.getItem(`${CACHE_PREFIX}.LastAuthUser`);
+  } catch {
+    return null;
+  }
+}
+
 function cachedRefreshToken(): string | null {
   try {
-    const username = localStorage.getItem(`${CACHE_PREFIX}.LastAuthUser`);
+    const username = lastAuthUser();
     return username ? localStorage.getItem(`${CACHE_PREFIX}.${username}.refreshToken`) : null;
   } catch {
     return null;
+  }
+}
+
+/** `offline` é diferente de `rejected` de propósito: sem rede não dá para
+ *  afirmar que a sessão morreu, e avisar "expirou" nesse caso seria mentir para
+ *  quem só entrou no elevador. */
+export type RefreshOutcome = "ok" | "rejected" | "offline";
+
+/** Renova a sessão com o refresh token que o Amplify deles já guarda.
+ *
+ *  É o MESMO movimento que o app do Adalove faz sozinho quando o access token
+ *  vence — por isso a sessão parece durar o dia inteiro na UI original. Só que
+ *  o refresh deles roda a partir das chamadas deles, e com a nossa overlay na
+ *  frente essas chamadas não acontecem: o token vencia, e a única coisa que a
+ *  gente sabia fazer era pedir para recarregar. Aqui a gente renova em vez de
+ *  avisar — o access token do Cognito dura uma hora, o refresh dura semanas.
+ *
+ *  O token novo é gravado nas mesmas chaves do cache do Amplify, então a UI
+ *  original continua logada junto. O refresh token não volta na resposta e não
+ *  é tocado: `cacheSession` só escreve o que veio. */
+export async function refreshSession(): Promise<RefreshOutcome> {
+  const username = lastAuthUser();
+  const refresh = cachedRefreshToken();
+  if (!username || !refresh) return "rejected";
+
+  // `deviceKey` só existe se o pool deles tiver rastreio de dispositivo ligado —
+  // e aí o refresh SEM ele é recusado. Vai junto quando o Amplify tiver gravado,
+  // que é a mesma condição em que o refresh deles o manda.
+  let deviceKey: string | null = null;
+  try {
+    deviceKey = localStorage.getItem(`${CACHE_PREFIX}.${username}.deviceKey`);
+  } catch {
+    /* storage bloqueado: tenta sem */
+  }
+
+  try {
+    const res = await idp<InitiateAuthResponse>("InitiateAuth", {
+      AuthFlow: "REFRESH_TOKEN_AUTH",
+      ClientId: CLIENT_ID,
+      AuthParameters: {
+        REFRESH_TOKEN: refresh,
+        ...(deviceKey ? { DEVICE_KEY: deviceKey } : {}),
+      },
+    });
+
+    const session = res.AuthenticationResult;
+    if (!session?.AccessToken) return "rejected";
+
+    cacheSession(username, session);
+    return "ok";
+  } catch (error) {
+    // `idp` só traduz para LoginError o que o Cognito RESPONDEU; qualquer outra
+    // coisa (TypeError do fetch) é rede, não sessão.
+    return error instanceof LoginError ? "rejected" : "offline";
   }
 }
 

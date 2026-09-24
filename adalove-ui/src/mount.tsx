@@ -6,19 +6,22 @@
 import { StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import App from "~/App";
-import { adaloveLoginPreferred, forgetAdaloveLogin, signOut } from "~/data/auth";
+import { adaloveLoginPreferred, forgetAdaloveLogin, refreshSession, signOut } from "~/data/auth";
 import {
+  adaloveDelete,
   adaloveGet,
+  adalovePost,
   adalovePut,
   AdaloveAuthError,
   currentUser,
+  ensureSession,
   fetchNews,
   fetchUserdata,
   getToken,
-  putActivityAnswer,
+  putActivityFields,
   putActivityStatus,
   resolveSectionUuid,
-  sessionExpired,
+  setTokenRefresher,
 } from "~/data/client";
 import { Login } from "~/screens/Login";
 import type { ApiClient } from "~/data/api";
@@ -30,11 +33,18 @@ import { historyDirty } from "~/shell/history";
 import { canonicalPath, isOverlayPath, restoreSyntheticPath } from "~/shell/routes";
 import { SkeletonShell } from "~/ui/Skeleton";
 
+// A sessão se renova sozinha, como na UI original: sem isto o token vencia em
+// uma hora de aba aberta e a única saída era recarregar. Ligado aqui, na
+// extensão, porque é só aqui que existe sessão do Adalove para renovar.
+setTokenRefresher(refreshSession);
+
 /** Na extensão as telas novas batem direto na apiv2, com o token da página. */
 const API: ApiClient = {
   get: (path) => adaloveGet(path),
   put: (path, body) => adalovePut(path, body),
-  sessionExpired: () => sessionExpired(),
+  post: (path, body) => adalovePost(path, body),
+  delete: (path) => adaloveDelete(path),
+  ensureSession: () => ensureSession(),
 };
 
 const HOST_ID = "gradesinteli-adalove-ui";

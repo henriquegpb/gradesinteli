@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import type { SessionState } from "~/data/client";
 
 // Um cliente só para todas as telas novas: na extensão bate na apiv2, no
 // harness de dev lê o fixture correspondente. Assim cada tela nova é só um
@@ -8,9 +9,12 @@ export interface ApiClient {
   get: <T>(path: string) => Promise<T>;
   /** Ausente no harness de dev: lá as escritas viram no-op. */
   put?: (path: string, body?: unknown) => Promise<unknown>;
-  /** Se a sessão do Adalove já venceu. Ausente no harness de dev, que não tem
-   *  sessão — e onde a ausência é justamente o que desliga o aviso. */
-  sessionExpired?: () => boolean;
+  post?: (path: string, body?: unknown) => Promise<unknown>;
+  delete?: (path: string) => Promise<unknown>;
+  /** Estado da sessão do Adalove, renovando o token quando está na hora — é por
+   *  isso que devolve promessa. `unknown` quer dizer "não deu para saber agora"
+   *  (rede fora), e quem chama deve manter o que já mostrava. */
+  ensureSession?: () => Promise<SessionState>;
 }
 
 const ApiContext = createContext<ApiClient | null>(null);

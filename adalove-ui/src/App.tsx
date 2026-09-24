@@ -223,24 +223,39 @@ function Workspace({
 
   useEffect(() => onHistoryRoute(setRouteState), []);
 
-  /** Sessão vencida. Sai de duas fontes, porque uma só sempre chega tarde:
-   *  a sondagem do `exp` do token (sem rede, barata) e a primeira escrita que
-   *  volta como erro de sessão — se o refresh do Adalove morreu antes da hora,
-   *  o `exp` ainda parece bom. */
+  /** Sessão morta DE VERDADE: o token venceu e o Cognito recusou renovar. O
+   *  vencimento em si não é notícia — acontece de hora em hora e a renovação
+   *  resolve sozinha, sem ninguém ver (ver `ensureSession` em ~/data/client).
+   *
+   *  Duas fontes, porque uma só sempre chega tarde: a sondagem periódica, que
+   *  também é o gatilho da renovação, e a primeira escrita que volta como erro
+   *  de sessão — quando o refresh morreu antes da hora, o `exp` ainda parece
+   *  bom.
+   *
+   *  E o estado é reversível: a faixa sai sozinha quando a sessão volta (outra
+   *  aba renovou, a rede voltou). Antes ela grudava até recarregar — uma vez na
+   *  tela, ficava lá mesmo com tudo funcionando de novo. */
   const [sessionDead, setSessionDead] = useState(false);
 
   useEffect(() => {
-    const expired = client?.sessionExpired;
-    if (!expired) return;
+    const ensure = client?.ensureSession;
+    if (!ensure) return;
 
-    const check = () => setSessionDead((dead) => dead || expired());
+    let alive = true;
+    const check = () => {
+      void ensure().then((state) => {
+        // `unknown` é rede fora: não dá para afirmar nada, então fica como está.
+        if (alive && state !== "unknown") setSessionDead(state === "expired");
+      });
+    };
     check();
 
-    // Voltar para a aba é justamente quando a sessão já morreu, e esperar o
-    // próximo tick deixaria a pessoa clicar antes de ler o aviso.
+    // Voltar para a aba é justamente quando o token passou da validade, e
+    // esperar o próximo tick deixaria a pessoa clicar antes da renovação.
     const id = setInterval(check, 30_000);
     document.addEventListener("visibilitychange", check);
     return () => {
+      alive = false;
       clearInterval(id);
       document.removeEventListener("visibilitychange", check);
     };
