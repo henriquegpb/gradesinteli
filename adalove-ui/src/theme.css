@@ -37,6 +37,12 @@
   --color-prova: #f551ee;
   --color-autoavaliacao: #7FA96A;
 
+  /* Faixa mais pesada da escala de peso das Notas. No site ela é #991111, um
+     vermelho quase preto que funciona sobre papel branco e SOME sobre o nosso
+     fundo escuro (1,6:1). É a única cor da escala que precisa de um valor por
+     tema — as outras já são tokens. */
+  --color-peso-critico: #ff4d4d;
+
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", "Cascadia Code", monospace;
 
@@ -84,6 +90,9 @@
   --color-yellow: #a8922e;
   --color-purple: #7a5ec8;
   --color-teal: #2e9e9e;
+
+  /* Aqui o vermelho quase preto do site é justamente o certo. */
+  --color-peso-critico: #991111;
 
   /* Nomes antigos, para o CSS portado do site. */
   --bg: #f4f4f6;

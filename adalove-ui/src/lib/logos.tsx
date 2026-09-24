@@ -55,6 +55,27 @@ const SVGS = {
 export type LogoName = keyof typeof SVGS;
 
 const WHITE = /^(#fff|#ffffff|white)$/i;
+/** Branco, preto ou já `currentColor`: cor sem marca, que não sobrevive à troca
+ *  de tema sozinha. */
+const ACHROMATIC = /^(#fff{1,3}|#ffffff|white|#000|#000000|black|currentColor)$/i;
+
+/** Logo que é só silhueta: todas as cores visíveis são branco ou preto.
+ *
+ *  É o caso do OpenAI (branco puro) e do GitHub (o gato é branco). Desenhado
+ *  para um fundo escuro, some no tema claro — e não há marca a preservar,
+ *  porque a cor não é da marca, é do fundo para o qual o arquivo foi feito.
+ *  Esses seguem a cor do texto sempre, sem o caller precisar saber.
+ *
+ *  `url(…)` fica de fora: é gradiente, e gradiente é cor de marca (Drive,
+ *  Google). `mask-type:alpha` também não conta — o preto lá dentro é recorte,
+ *  não pintura —, mas isso se resolve sozinho: um logo com máscara tem cores de
+ *  verdade no desenho e não cai neste caminho. */
+function isSilhouette(svg: string): boolean {
+  const visible = [...svg.matchAll(/fill(?:="|:)\s*([^";]+)/gi)]
+    .map((m) => m[1]!.trim())
+    .filter((f) => f !== "none" && !f.startsWith("url("));
+  return visible.length > 0 && visible.every((f) => ACHROMATIC.test(f));
+}
 
 /** Deixa o logo seguir a cor do botão, para funcionar nos dois temas.
  *
@@ -117,10 +138,12 @@ export function Logo({
 }: {
   name: LogoName;
   size?: number;
+  /** Força a versão monocromática. Logos de silhueta já entram assim sozinhos. */
   mono?: boolean;
   className?: string;
 }) {
-  const svg = mono ? monochrome(SVGS[name]) : SVGS[name];
+  const raw = SVGS[name];
+  const svg = mono || isSilhouette(raw) ? monochrome(raw) : raw;
   return (
     <span
       aria-hidden

@@ -17,7 +17,7 @@ function weightColor(peso: number): string {
   if (peso <= 0.02) return "var(--color-yellow)";
   if (peso <= 0.03) return "var(--color-orange)";
   if (peso <= 0.04) return "var(--color-red)";
-  if (peso <= 0.05) return "#991111";
+  if (peso <= 0.05) return "var(--color-peso-critico)";
   return "var(--color-purple)";
 }
 
