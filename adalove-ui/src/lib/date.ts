@@ -23,6 +23,27 @@ export function formatDate(iso: string | null): string | null {
   return `${day}/${month}/${d.getUTCFullYear()}`;
 }
 
+// Os prazos do pedido de revisão chegam SEM fuso ("2026-09-28T23:59:00") e são
+// hora de parede: o front do Adalove lê os campos do próprio texto, sem
+// converter. Passar por `new Date()` os leria como horário local e, na volta,
+// `getUTCHours()` somaria três horas — 23:59 do dia 28 viraria 02:59 do dia 29,
+// e o prazo mudaria de dia bem na hora em que isso mais importa.
+
+const NAIVE = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/;
+
+/** "28/09/2026 - 23:59h" */
+export function formatNaiveDateTime(iso: string | null): string | null {
+  const m = iso ? NAIVE.exec(iso) : null;
+  if (!m?.[4]) return formatNaiveDate(iso);
+  return `${m[3]}/${m[2]}/${m[1]} - ${m[4]}:${m[5]}h`;
+}
+
+/** "28/09/2026" */
+export function formatNaiveDate(iso: string | null): string | null {
+  const m = iso ? NAIVE.exec(iso) : null;
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : null;
+}
+
 /** Chave de agrupamento por dia: "2026-08-03" */
 export function dayKey(iso: string | null): string | null {
   const d = parse(iso);

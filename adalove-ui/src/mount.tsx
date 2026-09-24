@@ -313,7 +313,7 @@ export async function mountOverlay() {
         raw={raw}
         onExit={() => void setUiMode("original")}
         persistStatus={putActivityStatus}
-        persistAnswer={putActivityAnswer}
+        persistFields={putActivityFields}
         fetchNews={fetchNews}
         user={currentUser()}
         onLogout={logout}

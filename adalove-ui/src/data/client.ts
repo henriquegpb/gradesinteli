@@ -339,6 +339,19 @@ export function adalovePut(path: string, body?: unknown): Promise<unknown> {
   });
 }
 
+/** POST genérico (pedido de revisão de nota, criar tarefa). */
+export function adalovePost(path: string, body?: unknown): Promise<unknown> {
+  return adaloveFetch(path, {
+    method: "POST",
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+/** DELETE genérico (apagar tarefa). */
+export function adaloveDelete(path: string): Promise<unknown> {
+  return adaloveFetch(path, { method: "DELETE" });
+}
+
 export function fetchUserdata(sectionUuid: string): Promise<RawUserdata> {
   return adaloveFetch<RawUserdata>(`/sections/${sectionUuid}/userdata`);
 }
@@ -399,22 +412,29 @@ export function putActivityStatus(
  *  e o front avisa "Sua resposta ultrapassou o limite de 8000 caracteres". */
 export const ANSWER_MAX_CHARS = 8000;
 
-/** Salva a resposta da atividade. O endpoint é genérico — o corpo é um mapa
- *  `{ campo: valor }` e a UI original o usa para vários campos do cartão
- *  (resposta, anotações, tags, nota pessoal). Aqui só a resposta escreve.
+/** Campos do cartão que a UI original escreve pelo autosave.
  *
- *  `PUT /student-activities/{uuid}/autosave  {"activityStudyAnswer": "<html>"}`
- *
- *  O campo é `activityStudyAnswer`, e NÃO `studyAnswer` como vem no /userdata:
- *  a API responde 400 com o nome de leitura. O de escrita saiu do bundle deles
- *  (`Y({target:{value, name:"activityStudyAnswer"}})`) — os outros campos do
- *  mesmo endpoint seguem o mesmo prefixo (`activityNotes`, `activityRating`). */
-export function putActivityAnswer(
+ *  Os nomes de ESCRITA não são os de leitura do /userdata: a resposta se chama
+ *  `activityStudyAnswer` aqui e `studyAnswer` lá, e a API responde 400 com o
+ *  nome de leitura. Saiu do bundle deles
+ *  (`Y({target:{value, name:"activityStudyAnswer"}})`); os demais campos do
+ *  mesmo endpoint seguem o prefixo `activity*`, que é o que faz `activityNotes`
+ *  e `activityTags` valerem para os dois lados. */
+export interface ActivityFields {
+  activityStudyAnswer?: string;
+  activityNotes?: string;
+  /** Tags numa string só, separadas por vírgula. */
+  activityTags?: string;
+}
+
+/** `PUT /student-activities/{uuid}/autosave  { campo: valor }` — um mapa, não um
+ *  campo fixo: é o mesmo endpoint para resposta, anotações e tags. */
+export function putActivityFields(
   studentActivityUuid: string,
-  answerHtml: string,
+  fields: ActivityFields,
 ): Promise<unknown> {
   return adaloveFetch(`/student-activities/${studentActivityUuid}/autosave`, {
     method: "PUT",
-    body: JSON.stringify({ activityStudyAnswer: answerHtml }),
+    body: JSON.stringify(fields),
   });
 }

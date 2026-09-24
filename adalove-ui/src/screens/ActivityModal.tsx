@@ -1,7 +1,6 @@
 import {
   Bold,
   CalendarClock,
-  ChevronDown,
   ExternalLink,
   Italic,
   Link2,
@@ -17,13 +16,16 @@ import {
   Video,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtNota } from "@/lib/format";
 import { AskAiButtons } from "~/ai/AskAiButton";
 import { AttendanceDetail } from "~/screens/AttendanceDetail";
+import { ActivityOrganization } from "~/screens/ActivityOrganization";
+import { GradeRevision } from "~/screens/GradeRevision";
 import { CATEGORY_COLOR } from "~/data/activityTypes";
 import { useApi } from "~/data/api";
-import { ANSWER_MAX_CHARS } from "~/data/client";
+import { ANSWER_MAX_CHARS, type ActivityFields } from "~/data/client";
+import type { Task } from "~/data/organization";
 import { STATUS_DONE, STATUS_LABEL, type ActivityStatus } from "~/data/types";
 import type { ActivityView, SectionView } from "~/data/viewmodel";
 import { cn } from "~/lib/cn";
@@ -32,6 +34,7 @@ import { gradeColor } from "~/lib/grade";
 import { sanitizeHtml, sanitizeTextOrHtml } from "~/lib/sanitize";
 import { Badge } from "~/ui/Badge";
 import { Button } from "~/ui/Button";
+import { Html } from "~/ui/Html";
 import { Modal } from "~/ui/Modal";
 import { Select } from "~/ui/Select";
 import { Tabs } from "~/ui/Tabs";
@@ -84,6 +87,8 @@ interface Material {
 
 interface ActivityDetail {
   subjects?: { uuid: string; subject: string }[];
+  /** Checklist do cartão. Não vem no /userdata — só por aqui. */
+  tasks?: Task[];
   prerequisites?: { uuid?: string; prerequisite?: string; title?: string }[];
   activityStudyMaterial?: Material[];
   activityVideoMaterial?: Material[];
@@ -91,85 +96,6 @@ interface ActivityDetail {
 
 function Empty({ children }: { children: string }) {
   return <p className="text-sm text-fg-muted">{children}</p>;
-}
-
-/** ~10 linhas de `text-sm leading-relaxed`. Acima disso o enunciado empurra o
- *  resto do modal para fora da vista. */
-const CLAMP_PX = 232;
-
-/** Conteúdo do Adalove com "Ver mais", igual ao deles. O corte é medido, não
- *  chutado por contagem de caracteres: o HTML tem listas, títulos e imagens, e
- *  contar caracteres erraria feio.
- *
- *  Aceita HTML ou texto puro: enunciado e descrição vêm marcados, feedback e
- *  resposta nem sempre. */
-function Html({ html }: { html: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [overflows, setOverflows] = useState(false);
-  // Altura do corte arredondada para baixo até fechar uma linha inteira. Cortar
-  // na altura crua deixava meia linha de letras aparecendo na borda.
-  const [clampPx, setClampPx] = useState(CLAMP_PX);
-  const sanitized = useMemo(() => sanitizeTextOrHtml(html), [html]);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const check = () => {
-      // `line-height: normal` não vira número em getComputedStyle; nesse caso o
-      // 1.55 do tema é a melhor aproximação.
-      const styles = getComputedStyle(el);
-      const line = parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.55;
-      const lines = Math.max(1, Math.floor(CLAMP_PX / line));
-      setClampPx(line * lines);
-      setOverflows(el.scrollHeight > line * lines + 8);
-    };
-    check();
-    // Imagens e fontes chegam depois e mudam a altura.
-    const observer = new ResizeObserver(check);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [sanitized]);
-
-  // Fade na PRÓPRIA camada de texto (máscara), em vez de uma faixa com a cor do
-  // fundo por cima: o mesmo componente aparece sobre `surface` (modal) e sobre
-  // `bg` (caixa da resposta), e a faixa colorida só combinava com um dos dois.
-  const fade =
-    "linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent 100%)";
-
-  return (
-    <div>
-      <div
-        ref={ref}
-        className={cn(
-          "adalove-prose text-sm leading-relaxed text-fg-soft",
-          !expanded && overflows && "overflow-hidden",
-        )}
-        style={
-          !expanded && overflows
-            ? { maxHeight: clampPx, maskImage: fade, WebkitMaskImage: fade }
-            : undefined
-        }
-        // Sanitizado: sem script/iframe/handlers inline.
-        dangerouslySetInnerHTML={{ __html: sanitized }}
-      />
-
-      {overflows && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-1 inline-flex items-center gap-1 text-xs text-accent transition-opacity hover:opacity-80"
-        >
-          <ChevronDown
-            size={12}
-            aria-hidden
-            className={cn("transition-transform duration-200", expanded && "rotate-180")}
-          />
-          {expanded ? "Ver menos" : "Ver mais"}
-        </button>
-      )}
-    </div>
-  );
 }
 
 function LinkList({
@@ -510,7 +436,7 @@ function AnswerEditor({
       {tooLong && (
         <p className="mt-1.5 text-[0.62rem] text-red">
           A resposta passou de {ANSWER_MAX_CHARS.toLocaleString("pt-BR")} caracteres e não foi
-          salva — é o limite do Adalove. Reduza o texto.
+          salva: é o limite do Adalove. Reduza o texto.
         </p>
       )}
     </div>
@@ -522,14 +448,15 @@ export function ActivityModal({
   view,
   onClose,
   onMove,
-  onAnswer,
+  onFields,
 }: {
   activity: ActivityView | null;
   view: SectionView;
   onClose: () => void;
   onMove?: (activity: ActivityView, status: ActivityStatus, sort: number) => void;
-  /** Persiste a resposta. Ausente => a resposta fica só de leitura. */
-  onAnswer?: (activity: ActivityView, html: string) => Promise<unknown>;
+  /** Persiste o que o aluno escreve (resposta, anotações, tags). Ausente =>
+   *  todos esses campos ficam só de leitura. */
+  onFields?: (activity: ActivityView, fields: ActivityFields) => Promise<unknown>;
 }) {
   const [tab, setTab] = useState<Tab>("conteudo");
 
@@ -537,6 +464,9 @@ export function ActivityModal({
     activity ? `/student-activities/${activity.id}/activity/data` : null,
   );
   const subjects = useMemo(() => detail?.subjects ?? [], [detail]);
+  // Estável de propósito: `Tasks` recarrega a lista quando esta referência muda,
+  // e um `[]` novo a cada render zeraria a checklist a cada tag salva.
+  const tasks = useMemo(() => detail?.tasks ?? [], [detail]);
   const visibleTabs = useMemo(() => (activity ? tabsFor(activity) : TABS), [activity]);
 
   // Trocar de atividade pode tirar do ar a aba aberta (a de Avaliação some em
@@ -707,8 +637,11 @@ export function ActivityModal({
           />
         )}
 
+        {/* A `key` remonta o painel ao trocar de cartão — é ela que zera o editor
+            de resposta e o pedido de revisão. Fica aqui, e não em cada um deles:
+            como irmãos, os dois teriam a MESMA chave, que é chave duplicada. */}
         {tab === "avaliacao" && (
-          <div className="space-y-4">
+          <div key={`avaliacao-${activity.id}`} className="space-y-4">
             {activity.question ? (
               <div>
                 <div className="text-[0.58rem] uppercase tracking-[0.06em] text-fg-muted">
@@ -725,11 +658,10 @@ export function ActivityModal({
             {/* Em "Feito" a resposta é só leitura: o Adalove trava a edição do
                 cartão concluído, e deixar editar aqui daria um texto que a
                 plataforma recusaria — pior do que não oferecer o campo. */}
-            {onAnswer && activity.status !== STATUS_DONE ? (
+            {onFields && activity.status !== STATUS_DONE ? (
               <AnswerEditor
-                key={activity.id}
                 activity={activity}
-                onSave={(html) => onAnswer(activity, html)}
+                onSave={(html) => onFields(activity, { activityStudyAnswer: html })}
               />
             ) : (
               (activity.answer || activity.status === STATUS_DONE) && (
@@ -740,7 +672,7 @@ export function ActivityModal({
                     </div>
                     {activity.status === STATUS_DONE && (
                       <span className="text-[0.58rem] text-fg-muted">
-                        Concluída — mova para Fazendo para editar
+                        Concluída. Mova para Fazendo para editar
                       </span>
                     )}
                   </div>
@@ -768,21 +700,22 @@ export function ActivityModal({
                 <span className="text-fg-soft">Sem avaliação até o momento</span>
               )}
             </div>
+
+            {/* Prova fica de fora: lá a revisão é por questão, noutro endpoint e
+                numa tela que a gente ainda não reconstruiu — o mesmo recorte que
+                o Adalove faz. A chamada só acontece com esta aba aberta, então
+                abrir um cartão não gasta uma requisição a mais. */}
+            {!activity.isExam && <GradeRevision activity={activity} />}
           </div>
         )}
 
         {tab === "organizacao" && (
-          <div className="space-y-4">
-            {activity.notes ? (
-              <div>
-                <div className="text-[0.58rem] uppercase tracking-[0.06em] text-fg-muted">
-                  Anotações
-                </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-fg-soft">{activity.notes}</p>
-              </div>
-            ) : (
-              <Empty>Você não escreveu anotações nesta atividade.</Empty>
-            )}
+          <div key={`organizacao-${activity.id}`} className="space-y-4">
+            <ActivityOrganization
+              activity={activity}
+              tasks={tasks}
+              onSave={onFields ? (fields) => onFields(activity, fields) : undefined}
+            />
 
             {(activity.positivePoints ?? activity.negativePoints) && (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -819,14 +752,6 @@ export function ActivityModal({
                     <li key={p.uuid ?? i}>{p.title ?? p.prerequisite}</li>
                   ))}
                 </ul>
-              </div>
-            )}
-
-            {activity.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {activity.tags.map((t) => (
-                  <Badge key={t}>{t}</Badge>
-                ))}
               </div>
             )}
           </div>

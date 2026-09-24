@@ -7,11 +7,16 @@ import {
   type SimulacaoConfig,
 } from "@/types/grades";
 import { ApiProvider, useApiClient, type ApiClient } from "~/data/api";
-import { AdaloveAuthError, type AdaloveUser } from "~/data/client";
+import { AdaloveAuthError, type ActivityFields, type AdaloveUser } from "~/data/client";
 import { normalizeNews, type NewsItem } from "~/data/news";
 import { getPref, setPref } from "~/lib/prefs";
 import type { Theme } from "~/shell/HeaderActions";
-import { STATUS_DONE, type ActivityStatus, type RawUserdata } from "~/data/types";
+import {
+  STATUS_DONE,
+  type ActivityStatus,
+  type RawActivity,
+  type RawUserdata,
+} from "~/data/types";
 import { buildSectionView, type ActivityView } from "~/data/viewmodel";
 import { ActivityModal } from "~/screens/ActivityModal";
 import { Atividades } from "~/screens/Atividades";
@@ -48,8 +53,9 @@ export interface AppProps {
     status: ActivityStatus,
     sort: number,
   ) => Promise<unknown>;
-  /** Persiste a resposta da atividade. Se ausente, a resposta fica só de leitura. */
-  persistAnswer?: (studentActivityUuid: string, answerHtml: string) => Promise<unknown>;
+  /** Persiste os campos que o aluno escreve no cartão (resposta, anotações,
+   *  tags). Se ausente, todos eles ficam só de leitura. */
+  persistFields?: (studentActivityUuid: string, fields: ActivityFields) => Promise<unknown>;
   /** Tela inicial, quando explícita: o harness de dev usa `?route=`. Na extensão
    *  fica ausente e quem manda é a URL (`~/shell/routes`). */
   initialRoute?: RouteId;
@@ -85,7 +91,7 @@ function Workspace({
   raw: initialRaw,
   onExit,
   persistStatus,
-  persistAnswer,
+  persistFields,
   initialRoute,
   fetchNews,
   user = null,
@@ -99,7 +105,11 @@ function Workspace({
     () => initialRoute ?? routeForPath() ?? "overview",
   );
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [selected, setSelected] = useState<ActivityView | null>(null);
+  // Do cartão aberto guardamos só o id, não o objeto: `ActivityView` é
+  // recalculado a cada mudança do `raw`, e segurar o de quando o cartão foi
+  // clicado deixava o modal mostrando a tag que acabou de ser criada como se
+  // não existisse — o que a pessoa lê como "não salvou".
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   // Movimento aplicado na tela mas ainda não enviado: espera a confirmação de
   // "Feito" numa ponderada. `activity` é o estado ANTES do movimento — é dele
   // que sai o caminho de volta se a pessoa cancelar.
@@ -281,7 +291,7 @@ function Workspace({
         .get<RawUserdata>(`/sections/${uuid}/userdata`)
         .then((next) => {
           setRaw(next);
-          setSelected(null);
+          setSelectedId(null);
           setWeek("all");
         })
         .catch((error: unknown) => {
@@ -315,6 +325,13 @@ function Workspace({
     () => buildSectionView(raw, { ...simulacao, metaFinal: effectiveMetaFinal }),
     [raw, simulacao, effectiveMetaFinal],
   );
+
+  const selected = useMemo(
+    () => view.activities.find((a) => a.id === selectedId) ?? null,
+    [selectedId, view.activities],
+  );
+
+  const openActivity = useCallback((activity: ActivityView) => setSelectedId(activity.id), []);
 
   /** Aplica a mudança E renumera a coluna de destino. O Adalove só envia o
    *  `sort` do card movido e re-sequencia no backend; sem renumerar aqui, dois
@@ -431,30 +448,40 @@ function Workspace({
     setActivityStatus(activity.id, activity.status, previousSort);
   }, [pendingMove, setActivityStatus]);
 
-  /** Ao contrário do kanban, a resposta NÃO é otimista: o texto já está na tela
-   *  (é o que a pessoa acabou de digitar), então antecipar não ganha nada, e
-   *  gravar antes da confirmação faria o editor exibir "Salvo" para um texto que
-   *  o Adalove pode ter recusado. Só depois do PUT o `raw` acompanha — assim
-   *  reabrir o cartão mostra o que está lá de verdade. */
-  const handleAnswer = useCallback(
-    async (activity: ActivityView, html: string) => {
-      if (!persistAnswer) return;
+  /** Ao contrário do kanban, o que o aluno escreve NÃO é otimista: o texto já
+   *  está na tela (é o que a pessoa acabou de digitar), então antecipar não
+   *  ganha nada, e gravar antes da confirmação faria o editor exibir "Salvo"
+   *  para um texto que o Adalove pode ter recusado. Só depois do PUT o `raw`
+   *  acompanha — assim reabrir o cartão mostra o que está lá de verdade.
+   *
+   *  O nome de escrita da resposta não é o de leitura (`activityStudyAnswer` ↔
+   *  `studyAnswer`); a tradução vai explícita abaixo, porque sem ela a tela
+   *  continuaria mostrando o valor velho depois de um salvamento bem-sucedido. */
+  const handleFields = useCallback(
+    async (activity: ActivityView, fields: ActivityFields) => {
+      if (!persistFields) return;
       try {
-        await persistAnswer(activity.id, html);
+        await persistFields(activity.id, fields);
       } catch (error) {
-        // O editor já mostra "Não salvo" e o toast do erro; o que falta é a
+        // Quem chamou já mostra "Não salvo" e o toast do erro; o que falta é a
         // faixa, para o aviso não sumir junto com o toast.
         if (error instanceof AdaloveAuthError) setSessionDead(true);
         throw error;
       }
+
+      const patch: Partial<RawActivity> = {};
+      if (fields.activityStudyAnswer !== undefined) patch.studyAnswer = fields.activityStudyAnswer;
+      if (fields.activityNotes !== undefined) patch.activityNotes = fields.activityNotes;
+      if (fields.activityTags !== undefined) patch.activityTags = fields.activityTags;
+
       setRaw((current) => ({
         ...current,
         activities: current.activities.map((a) =>
-          a.studentActivityUuid === activity.id ? { ...a, studyAnswer: html } : a,
+          a.studentActivityUuid === activity.id ? { ...a, ...patch } : a,
         ),
       }));
     },
-    [persistAnswer],
+    [persistFields],
   );
 
   return (
@@ -507,7 +534,7 @@ function Workspace({
         {route === "atividades" && (
           <Atividades
             view={view}
-            onOpen={setSelected}
+            onOpen={openActivity}
             // O Adalove pode travar o kanban por turma; respeitamos a regra deles.
             onMove={persistStatus && view.section.allowCardMovement ? handleMove : undefined}
             week={week}
@@ -548,9 +575,9 @@ function Workspace({
       <ActivityModal
         activity={selected}
         view={view}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedId(null)}
         onMove={persistStatus ? handleMove : undefined}
-        onAnswer={persistAnswer ? handleAnswer : undefined}
+        onFields={persistFields ? handleFields : undefined}
       />
 
       <ConfirmDialog
