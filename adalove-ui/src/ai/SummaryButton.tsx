@@ -94,7 +94,14 @@ export function SummaryButton({ view }: { view: SectionView }) {
     "flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-fg-soft transition-colors hover:bg-surface-hover hover:text-fg";
 
   return (
-    <div ref={wrapRef} className="relative">
+    // `flex` e não só `relative`: o gatilho é `inline-flex` e, dentro de um
+    // bloco, ele forma uma CAIXA DE LINHA — aí o vão do descendente da fonte
+    // entra embaixo dele e o wrapper fica alguns pixels mais alto que o botão.
+    // Como a fileira centraliza os itens, esse vão empurrava o botão para baixo
+    // e ele desalinhava do "Estudar para prova" ao lado (2px na extensão, onde
+    // a métrica da fonte é outra). Como item de flex não existe linha, então
+    // não existe vão, e o alinhamento não depende mais da fonte carregada.
+    <div ref={wrapRef} className="relative flex">
       <button
         type="button"
         aria-expanded={open}
