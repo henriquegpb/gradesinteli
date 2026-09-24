@@ -303,7 +303,7 @@ export default function Home() {
           {importError && <p className={styles.importErrorMsg}>{importError}</p>}
 
           <p className={styles.emptyHint}>
-            Seus dados ficam salvos no navegador — nada é enviado para nenhum servidor.
+            Seus dados ficam salvos no navegador. Nada é enviado para nenhum servidor.
           </p>
         </div>
       </div>

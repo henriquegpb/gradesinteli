@@ -34,7 +34,7 @@ const CHEVRON_HIT = 24;
 
 function detail(a: ActivityView): string {
   const when = formatDate(a.date) ?? a.week;
-  return `${a.caption} — ${when} · ${a.weight} ${a.weight === 1 ? "ponto" : "pontos"}`;
+  return `${a.caption} · ${when} · ${a.weight} ${a.weight === 1 ? "ponto" : "pontos"}`;
 }
 
 export function NextScored({

@@ -200,7 +200,7 @@ export function parseAdaloveHtml(html: string): ParsedAdalovePayload {
     // Detect "HTML Only" saves of the React SPA — just the empty root shell, no rendered content
     if (/<div[^>]+id="root"\s*>\s*<\/div>/.test(html)) {
       throw new Error(
-        "Arquivo salvo como 'Somente HTML'. Para importar, salve a página como 'Página Web Completa' (Webpage, Complete) no navegador — isso preserva os dados já carregados na tela."
+        "Arquivo salvo como 'Somente HTML'. Para importar, salve a página como 'Página Web Completa' (Webpage, Complete) no navegador. Isso preserva os dados já carregados na tela."
       );
     }
     throw new Error(

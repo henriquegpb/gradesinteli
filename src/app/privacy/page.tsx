@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import styles from "./privacy.module.css";
 
 export const metadata: Metadata = {
-  title: "Política de Privacidade — GradesInteli",
+  title: "Política de Privacidade | GradesInteli",
   description:
     "Como o GradesInteli e a extensão Adalove → GradesInteli tratam os seus dados.",
 };
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
         <h2>Resumo</h2>
         <p>
           Nós <strong>não temos servidor</strong>. Nenhum dado seu é enviado, guardado ou
-          processado por nós — tudo acontece dentro do seu próprio navegador, entre você e
+          processado por nós. Tudo acontece dentro do seu próprio navegador, entre você e
           os sistemas do Inteli, com a sessão que você já tem aberta.
         </p>
 
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
         <p>
           Para montar a interface alternativa, a extensão <strong>lê o token de sessão
           que o Adalove já guardou no seu navegador</strong> e o usa para consultar a API
-          do Inteli em seu nome — exatamente como a página do Adalove faz. O token{" "}
+          do Inteli em seu nome, exatamente como a página do Adalove faz. O token{" "}
           <strong>nunca sai do seu dispositivo</strong>: ele não é enviado para nós, não é
           copiado para lugar nenhum e não é guardado pela extensão. A extensão também não
           faz login por você nem tem acesso à sua senha.
@@ -59,7 +59,7 @@ export default function PrivacyPage() {
           da página aberta, isso inclui: atividades, notas, pesos e presenças da sua
           turma; membros do seu grupo; histórico escolar e CRA; notícias e cardápio;
           boletos e notas fiscais; vagas de estágio, intercâmbio e simulados; e, na tela
-          de perfil, os seus dados cadastrais no Inteli — incluindo nome, e-mail,
+          de perfil, os seus dados cadastrais no Inteli, incluindo nome, e-mail,
           telefone, CPF e endereço. Nada disso é transmitido para fora do seu navegador.
         </p>
 
@@ -91,7 +91,7 @@ export default function PrivacyPage() {
         <p>
           Existe <strong>um único caso</strong>, e ele depende de um clique seu: os botões
           &ldquo;Explicar com IA&rdquo; e &ldquo;Resumir com IA&rdquo; abrem o ChatGPT, o
-          Claude ou o Gemini com um texto pronto sobre a atividade — enunciado, matéria e
+          Claude ou o Gemini com um texto pronto sobre a atividade: enunciado, matéria e
           semana. Esse texto vai para o serviço de IA que você escolheu, e passa a seguir
           a política de privacidade dele. Se você não clicar nesses botões, nada é enviado.
         </p>
@@ -108,19 +108,19 @@ export default function PrivacyPage() {
         <h2>Permissões da extensão</h2>
         <ul>
           <li>
-            <strong>adalove.inteli.edu.br</strong> — ler a página e a sessão para exibir
+            <strong>adalove.inteli.edu.br</strong>: ler a página e a sessão para exibir
             suas notas, atividades e presenças, e desenhar a interface alternativa.
           </li>
           <li>
-            <strong>apiv2.inteli.edu.br</strong> — consultar a API acadêmica do Inteli em
+            <strong>apiv2.inteli.edu.br</strong>: consultar a API acadêmica do Inteli em
             seu nome, com a sua própria sessão, para montar as telas.
           </li>
           <li>
-            <strong>www.gradesinteli.com</strong> — entregar as notas ao dashboard quando
+            <strong>www.gradesinteli.com</strong>: entregar as notas ao dashboard quando
             você clica em exportar.
           </li>
           <li>
-            <strong>armazenamento (storage)</strong> — guardar as preferências e a última
+            <strong>armazenamento (storage)</strong>: guardar as preferências e a última
             captura de notas, sempre no seu dispositivo.
           </li>
         </ul>
@@ -139,7 +139,7 @@ export default function PrivacyPage() {
         <h2>Código aberto</h2>
         <p>
           Tudo que está descrito aqui pode ser conferido no código, que é público. Se algo
-          nesta política não corresponder ao que o código faz, o código é a verdade — e
+          nesta política não corresponder ao que o código faz, o código é a verdade, e
           por favor nos avise.
         </p>
 

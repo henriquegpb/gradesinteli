@@ -35,7 +35,7 @@ export function AskAiButtons({
       window.open(target.buildUrl(prompt), "_blank", "noopener,noreferrer");
       toast.toast(
         copied
-          ? `Prompt copiado — cole no ${target.label}.`
+          ? `Prompt copiado. Cole no ${target.label}.`
           : `Não consegui copiar. Abra o ${target.label} e descreva a atividade.`,
         copied ? "success" : "error",
       );
@@ -64,7 +64,7 @@ export function AskAiButtons({
         <button
           key={provider.id}
           type="button"
-          title={`Explicar com ${provider.label} — abre em outra aba${provider.supportsPrefill ? "" : ", copiando o prompt"}`}
+          title={`Explicar com ${provider.label}: abre em outra aba${provider.supportsPrefill ? "" : ", copiando o prompt"}`}
           aria-label={`Explicar com ${provider.label}`}
           onClick={(e) => {
             e.stopPropagation();

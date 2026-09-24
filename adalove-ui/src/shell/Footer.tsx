@@ -122,7 +122,7 @@ export function Footer() {
         />
         <SocialGroup
           title="UI por Henrique Barone"
-          subtitle="Aluno do Inteli — esta interface é open source"
+          subtitle="Aluno do Inteli · esta interface é open source"
           socials={DEV}
         />
       </div>

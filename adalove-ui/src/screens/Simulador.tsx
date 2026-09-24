@@ -64,7 +64,7 @@ function statusOf(m: MetricasModulo): { label: string; color: string } {
     case "exigente":
       return { label: "Nota alta necessária", color: "var(--color-yellow)" };
     default:
-      return { label: "Acima de 10 — improvável", color: "var(--color-red)" };
+      return { label: "Acima de 10, improvável", color: "var(--color-red)" };
   }
 }
 

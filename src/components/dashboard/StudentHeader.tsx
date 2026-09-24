@@ -9,7 +9,7 @@ interface Props {
 
 export default function StudentHeader({ studentName, lastImportAt, uploadSlot }: Props) {
   const title = studentName
-    ? `Dashboard de Notas — ${studentName}`
+    ? `Dashboard de Notas · ${studentName}`
     : "Dashboard de Notas";
 
   return (

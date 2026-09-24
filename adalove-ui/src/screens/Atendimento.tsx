@@ -45,7 +45,7 @@ export function Atendimento({ onBack }: { onBack?: () => void }) {
 
       <h1 className="text-xl font-medium text-fg">Atendimento</h1>
       <p className="text-xs text-fg-muted">
-        O atendimento do Inteli fica fora do Adalove — estes links abrem em outra aba.
+        O atendimento do Inteli fica fora do Adalove: estes links abrem em outra aba.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">

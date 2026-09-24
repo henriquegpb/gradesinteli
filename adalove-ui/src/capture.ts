@@ -180,7 +180,7 @@ async function handleCommand(cmd: string): Promise<unknown> {
   switch (cmd) {
     case "on":
       await setCaptureMode(true);
-      return `captura ligada — ${captures.size} endpoint(s) na memória`;
+      return `captura ligada: ${captures.size} endpoint(s) na memória`;
     case "off":
       await setCaptureMode(false);
       return "captura desligada";
@@ -189,7 +189,7 @@ async function handleCommand(cmd: string): Promise<unknown> {
       return "capturas apagadas";
     case "export":
       await exportCaptures();
-      return `exportado — ${captures.size} endpoint(s)`;
+      return `exportado: ${captures.size} endpoint(s)`;
     case "list":
       return [...captures.keys()].sort();
     default:

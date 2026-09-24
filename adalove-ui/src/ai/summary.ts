@@ -133,7 +133,7 @@ const RESPONSE_RULES = [
   "## Como responder",
   "- Português do Brasil.",
   "- Seja conciso: explicação curta e concreta vale mais que texto longo. Sem introdução nem fechamento cerimonioso.",
-  "- Não me devolva a lista de atividades reescrita — ela é fonte, não resposta.",
+  "- Não me devolva a lista de atividades reescrita: ela é fonte, não resposta.",
   "- Onde o material não disser o suficiente, diga o que falta em vez de preencher com genérico.",
 ].join("\n");
 
@@ -185,7 +185,7 @@ function sprintPrompt(view: SectionView, sprint: Sprint): string {
   const artifacts = sprint.artifacts.length
     ? sprint.artifacts
         .map((a) => {
-          const peso = a.weight > 0 ? ` — vale ${a.weight} ponto(s) na média do módulo` : "";
+          const peso = a.weight > 0 ? `, vale ${a.weight} ponto(s) na média do módulo` : "";
           const enunciado = a.descriptionText
             ? `\n${truncate(a.descriptionText, MAX_ARTIFACT_CHARS)}`
             : "\n(sem enunciado no Adalove)";
@@ -221,7 +221,7 @@ function sprintPrompt(view: SectionView, sprint: Sprint): string {
     "",
     support.length
       ? [
-          `## Aulas e autoestudos da sprint (${support.length}) — o que sustenta a entrega`,
+          `## Aulas e autoestudos da sprint (${support.length}): o que sustenta a entrega`,
           supportShown.join("\n"),
           supportRest > 0 ? `  … e mais ${supportRest} itens de estudo.` : "",
         ]
@@ -231,11 +231,11 @@ function sprintPrompt(view: SectionView, sprint: Sprint): string {
     "",
     "## O que eu preciso",
     "Foque nos artefatos: as aulas entram como o que sustenta a entrega, não como assunto próprio.",
-    `1. Que etapa do projeto é a ${sprint.label}, em duas ou três frases — o que existe no fim dela que não existia antes.`,
+    `1. Que etapa do projeto é a ${sprint.label}, em duas ou três frases: o que existe no fim dela que não existia antes.`,
     "2. O que cada artefato pede em concreto, e o que eu preciso ter entendido para conseguir fazer.",
     previous
       ? "3. O que esta sprint consome das anteriores: em cima de que ela é construída."
-      : "3. Como esta sprint estabelece a base do projeto — ela é a primeira, então diga o que precisa sair certo daqui.",
+      : "3. Como esta sprint estabelece a base do projeto. Ela é a primeira, então diga o que precisa sair certo daqui.",
     next
       ? "4. O que ela prepara para as sprints seguintes: o que trava lá se sair mal aqui."
       : "4. Como ela fecha o projeto: o que o conjunto das sprints anteriores tem que sustentar na entrega final.",
@@ -272,7 +272,7 @@ export function buildSummaryPrompt(view: SectionView, scope: SummaryScope): stri
     byWeekOutline(activities),
     "",
     "## O que eu preciso",
-    "1. O que este conjunto ensina, na ordem em que faz sentido estudar — não na ordem do calendário, se ela não for a melhor.",
+    "1. O que este conjunto ensina, na ordem em que faz sentido estudar, não na ordem do calendário, se ela não for a melhor.",
     "2. Os conceitos centrais: o que é, para que serve e quando se usa. Curto, um parágrafo cada.",
     subject
       ? "3. Como os temas se conectam entre si e onde esta matéria entra no projeto do módulo."

@@ -81,7 +81,7 @@ export function SummaryButton({ view }: { view: SectionView }) {
       window.open(target.buildUrl(prompt), "_blank", "noopener,noreferrer");
       toast.toast(
         copied
-          ? `Resumo copiado — cole no ${target.label}.`
+          ? `Resumo copiado. Cole no ${target.label}.`
           : `Não consegui copiar. Abra o ${target.label} e peça o resumo.`,
         copied ? "success" : "error",
       );

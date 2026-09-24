@@ -50,7 +50,7 @@ export default function SimulationPanel({
         ? "Cenário confortável"
         : metricas.provaStatus === "exigente"
           ? "Nota alta necessária"
-          : "Acima de 10 — improvável";
+          : "Acima de 10, improvável";
 
   const provaClass = metricas.provaFeita
     ? styles.success
