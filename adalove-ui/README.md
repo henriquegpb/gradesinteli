@@ -27,6 +27,7 @@ Parâmetros do harness:
 | `?open=3` | abre o modal do n-ésimo card |
 | `?fail=1` | faz o `persistStatus` falhar, para exercitar o rollback do kanban |
 | `?expired=1` | finge sessão do Adalove vencida, para ver a faixa de sessão expirada |
+| `?revision=…` | pedido de revisão: `open` (padrão), `none`, `late`, `pending`, `deferred`, `undeferred`, `broken` |
 
 ## Rotas
 
@@ -38,7 +39,7 @@ compartilhável. O mapa é `src/shell/routes.ts`:
 | Tela | URL |
 |---|---|
 | `overview` | `/academic-life` (e `/`) |
-| `atividades` / `grupo` | `/academic-life/atividades` / `/academic-life/grupo` (sintéticos: não existem no Adalove) |
+| `atividades` / `grupo` / `prova-final` | `/academic-life/atividades`, `/academic-life/grupo`, `/academic-life/prova-final` (sintéticos: não existem no Adalove) |
 | `perfil` | `/profile` |
 | `noticias` | `/feed` |
 | `financeiro` | `/financial` |
@@ -61,12 +62,32 @@ mostrar a página deles desencontrada da URL.
 
 ## Como se conecta ao Adalove
 
-Toda a tela de Vida Acadêmica roda em três endpoints (extraídos do bundle do próprio Adalove):
+Toda a tela de Vida Acadêmica roda nestes endpoints (extraídos do bundle do próprio Adalove):
 
 ```
-GET  /sections/{sectionUuid}/userdata                  ← kanban, notas, faltas, grupo: tudo
-PUT  /student-activities/{uuid}/status  {sort, status} ← único write (arrastar card)
+GET  /sections/{sectionUuid}/userdata                        ← kanban, notas, faltas, grupo: tudo
+GET  /student-activities/{uuid}/activity/data                ← material, vídeo, assuntos, tarefas
+PUT  /student-activities/{uuid}/status    {sort, status}     ← arrastar card
+PUT  /student-activities/{uuid}/autosave  {campo: valor}     ← resposta, anotações, tags
+POST   /student-activity-tasks/student-activity/{uuid}          {caption}
+PUT    /student-activity-tasks/{task}/student-activity/{uuid}/status  {status}
+DELETE /student-activity-tasks/{task}/student-activity/{uuid}
+GET  /student-activity-grade-revisions/student-activity/{uuid}
+POST /student-activity-grade-revisions    {studentActivityUuid, reason}
 ```
+
+O `/autosave` é um mapa de campos, não um campo fixo — é por ele que resposta, anotações e tags
+gravam. Os nomes de ESCRITA não são os de leitura (`activityStudyAnswer` ↔ `studyAnswer`), e é por
+isso que `App.handleFields` traduz antes de remendar o `raw`. As tarefas são o único estado do
+cartão que não passa pelo `raw`: não vêm no /userdata, só no endpoint de detalhe.
+
+Os dois últimos são o pedido de revisão de nota, no fim da aba de Avaliação do cartão. O GET
+responde `{ canRequest, deadlineAt, revision }`; sem prazo e sem pedido não há nada a mostrar e a
+seção some. O caso sem pedido está conferido contra a API real; o objeto `revision` não, porque só
+chega depois de alguém pedir revisão — por isso cada campo dele é opcional na renderização
+(`?revision=broken` exercita isso), em vez de um nome errado derrubar a overlay. Prova fica de fora — lá a revisão é por questão, em `/…/exam/student-activity/{uuid}`,
+numa tela que ainda não reconstruímos. Os carimbos de data vêm **sem fuso** e são hora de parede:
+`formatNaiveDateTime` os lê do texto, porque convertê-los mudaria o prazo de dia.
 
 O token está em `localStorage["@buzz:token"]` na origem do Adalove. O content script roda no mundo
 ISOLADO **na mesma origem**, então lê direto: nada de ponte com o mundo MAIN, e **o token nunca sai
@@ -83,11 +104,13 @@ src/
   App.tsx        roteamento e estado; optimistic update do kanban
   theme.css      Tailwind v4 com os tokens do GradesInteli
   data/          client (API), auth (login/logout no Cognito), viewmodel (JSON → telas),
-                 activityTypes (tabela oficial)
-  ui/            primitivas (Card, Button, Badge, Table, Tabs, Modal, …)
+                 activityTypes (tabela oficial), gradeRevision (pedido de revisão),
+                 organization (tags, tarefas, anotações)
+  ui/            primitivas (Card, Button, Badge, Table, Tabs, Modal, Html, …)
   shell/         Sidebar, mapa de rotas (routes.ts) e navegação por URL (history.ts)
-  screens/       Login, Overview, Atividades, Notas, Faltas, Grupo, ActivityModal
-  ai/            prompt.ts (puro), providers.ts, AskAiButton
+  screens/       Login, Overview, Atividades, Notas, Faltas, Grupo, ProvaFinal, ActivityModal,
+                 ActivityOrganization, GradeRevision
+  ai/            prompt.ts / summary.ts / exam.ts (puros), providers.ts, AskAiButton
 ```
 
 **Cálculo de nota não é reimplementado aqui.** `data/viewmodel.ts` delega a
@@ -149,7 +172,9 @@ intocado.
 ## Fixtures
 
 `fixtures/*.json` são capturas reais de `/userdata`. Um fixture só (3º ano) esconde bugs de outros
-anos — já houve um. Para pedir capturas a colegas sem vazar dados de terceiros:
+anos — já houve um. A exceção é o pedido de revisão de nota: como o recurso é posterior às capturas
+e `fixtures/` não vai para o git, os payloads dele são encenados em `dev.tsx` (`REVISION_VARIANTS`),
+a partir do contrato do bundle. Para pedir capturas a colegas sem vazar dados de terceiros:
 
 ```bash
 node scripts/anonymize-fixture.mjs captura.json fixtures/turma-1ano.json
