@@ -17,6 +17,7 @@ export const ROUTE_PATHS: Record<RouteId, string> = {
   // Sintéticos: sub-telas da Vida Acadêmica, sem equivalente no Adalove.
   atividades: "/academic-life/atividades",
   grupo: "/academic-life/grupo",
+  "prova-final": "/academic-life/prova-final",
 
   // Onde o Adalove larga quem abriu um endereço que ele não conhece. É rota
   // nossa para que o link quebrado não jogue a pessoa no 404 deles no meio da

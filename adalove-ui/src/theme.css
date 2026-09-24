@@ -204,6 +204,44 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Entrada de conteúdo: um bloco sobe alguns pixels enquanto aparece.
+   O atraso vem de `--gi-enter-delay`, setado inline em cada bloco, e é ele que
+   escalona a tela — o conteúdo se monta de cima para baixo em vez de pular
+   inteiro na cara de quem abriu.
+
+   `backwards`, e não `both`: o fill para TRÁS é obrigatório (sem ele um bloco
+   com atraso ficaria visível e no lugar final até a animação começar, e aí
+   piscaria), mas o fill para a frente cobrava caro. Com `both`, o `transform`
+   do último keyframe continua aplicado para sempre, e o Chrome o computa como
+   `matrix(1,0,0,1,0,0)` em vez de `none` — matriz identidade ainda cria
+   contexto de empilhamento. Resultado: todo bloco animado virava uma caixa
+   fechada, e um menu `absolute z-50` lá dentro era coberto pelo cartão
+   seguinte. Com `backwards` o estilo volta ao natural quando a animação acaba,
+   e o `to` do keyframe já é exatamente esse estado natural. */
+@layer components {
+  @keyframes gi-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .gi-enter {
+    animation: gi-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: var(--gi-enter-delay, 0s);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gi-enter {
+      animation: none;
+    }
+  }
+}
+
 /* Toasts — portados do nora/web (app/styles/toast.css), com os tokens daqui.
    A barra de tempo pausa no hover pelo CSS; o JS espelha essa pausa para o
    descarte não acontecer enquanto a pessoa ainda está lendo. */

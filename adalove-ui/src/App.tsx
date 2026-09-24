@@ -26,6 +26,7 @@ import { NaoEncontrada } from "~/screens/NaoEncontrada";
 import { Noticias } from "~/screens/Noticias";
 import { Pagina, type PageSlug } from "~/screens/Pagina";
 import { Perfil } from "~/screens/Perfil";
+import { ProvaFinal } from "~/screens/ProvaFinal";
 import { Simulados } from "~/screens/Simulados";
 import { Overview } from "~/screens/Overview";
 import { Footer } from "~/shell/Footer";
@@ -469,8 +470,9 @@ function Workspace({
           <Overview
             view={view}
             onOpenWeek={openWeek}
-            onOpenActivity={setSelected}
+            onOpenActivity={openActivity}
             onSeeStudents={() => setRoute("grupo")}
+            onProvaFinal={() => setRoute("prova-final")}
             theme={theme}
             onTheme={setTheme}
             superTech={superTech}
@@ -499,6 +501,9 @@ function Workspace({
           />
         )}
         {route === "grupo" && <Grupo view={view} onBack={() => setRoute("overview")} />}
+        {route === "prova-final" && (
+          <ProvaFinal view={view} onBack={() => setRoute("overview")} />
+        )}
         {route === "perfil" && (
           <Perfil view={view} user={user} onBack={() => setRoute("overview")} />
         )}

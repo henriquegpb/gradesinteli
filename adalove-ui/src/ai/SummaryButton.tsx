@@ -22,6 +22,12 @@ import { Logo } from "~/lib/logos";
 import { copyText } from "~/lib/prefs";
 import { useToast } from "~/ui/Toast";
 
+/** O gatilho dos dois botões de IA da fileira de abas (este e o "Estudar para
+ *  prova", em ~/screens/Overview). Mora aqui porque foi aqui que nasceu, e é
+ *  compartilhado para os dois continuarem idênticos quando um mudar. */
+export const AI_BUTTON_CLASS =
+  "inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-surface px-3 text-xs font-medium text-fg-soft transition-colors duration-150 hover:border-accent hover:text-fg";
+
 /** Rótulo do escopo no botão de voltar, que é a única pista do que foi escolhido
  *  no passo anterior. */
 function scopeLabel(scope: SummaryScope): string {
@@ -94,10 +100,9 @@ export function SummaryButton({ view }: { view: SectionView }) {
         aria-expanded={open}
         onClick={() => (open ? close() : setOpen(true))}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-control border px-3 text-xs font-medium transition-colors duration-150",
-          open
-            ? "border-accent bg-surface-hover text-fg"
-            : "border-line bg-surface text-fg-soft hover:border-accent hover:text-fg",
+          AI_BUTTON_CLASS,
+          // Aberto, o gatilho fica com a cara do menu que ele abriu.
+          open && "border-accent bg-surface-hover text-fg",
         )}
       >
         <Sparkles size={14} aria-hidden />

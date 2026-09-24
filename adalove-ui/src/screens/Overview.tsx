@@ -1,5 +1,14 @@
-import { CalendarDays, ExternalLink, LayoutGrid, Table2, UserRoundX } from "lucide-react";
-import { useRef, useState, type KeyboardEvent } from "react";
+import {
+  CalendarDays,
+  ChevronRight,
+  ExternalLink,
+  GraduationCap,
+  LayoutGrid,
+  Table2,
+  UserRoundX,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { attendanceUnits } from "@/lib/attendance-parser";
 import { fmtNota } from "@/lib/format";
 import { CATEGORY_COLOR } from "~/data/activityTypes";
@@ -12,9 +21,10 @@ import type {
 import type { NewsItem } from "~/data/news";
 import type { ActivityView, SectionView } from "~/data/viewmodel";
 import { buildSubjects } from "~/ai/summary";
-import { SummaryButton } from "~/ai/SummaryButton";
+import { AI_BUTTON_CLASS, SummaryButton } from "~/ai/SummaryButton";
 import { cn } from "~/lib/cn";
 import { InteliSymbol } from "~/lib/logos";
+import { getPref, setPref } from "~/lib/prefs";
 import { GitlabButton, GithubStarButton, SlackButton, ThemeToggle, type Theme } from "~/shell/HeaderActions";
 import { ModuleProgress } from "~/shell/ModuleProgress";
 import { NextScored } from "~/shell/NextScored";
@@ -25,10 +35,12 @@ import { Notas } from "~/screens/Notas";
 import { SectionCards } from "~/screens/SectionCards";
 import { Simulador } from "~/screens/Simulador";
 import { WeeksOverview } from "~/screens/WeeksOverview";
+import { Badge } from "~/ui/Badge";
 import { Card, CardTitle } from "~/ui/Card";
+import { Donut } from "~/ui/Donut";
 import { Tooltip } from "~/ui/Tooltip";
 import { Tabs } from "~/ui/Tabs";
-import { SHORTCUT_CLASS, shortcut as cardShortcut } from "~/ui/shortcut";
+import { SHORTCUT_CLASS, shortcut as cardShortcut, stopCardClick } from "~/ui/shortcut";
 
 // Os cards do topo são atalhos para a aba que detalha o número deles: nota vai
 // para Notas, falta vai para Faltas. É o gesto que o aluno já tenta. A mecânica
@@ -112,74 +124,71 @@ function DualCard({
   );
 }
 
-/** Donut em SVG puro — mesma construção do GradesInteli (r=42, stroke 16). */
-function DistributionDonut({ slices }: { slices: { label: string; value: number; color: string }[] }) {
-  const size = 110;
-  const stroke = 16;
-  const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
-  const total = slices.reduce((sum, s) => sum + s.value, 0);
+/** Onde fica guardado que a pessoa já fechou o anúncio. */
+const BANNER_PREF = "prova-banner";
 
-  let offset = 0;
+/** Faixa de anúncio da tela de prova, na primeira linha da Visão geral.
+ *
+ *  É temporária: existe enquanto a função for novidade, porque um botão no pé
+ *  da página não é encontrado por quem não estava procurando. Laranja para não
+ *  se confundir com o resto da tela, fina, e o cartão inteiro é o alvo do
+ *  clique. Quem fechar não vê de novo: a escolha vai para o storage da
+ *  extensão, como as outras preferências.
+ *
+ *  Para remover a campanha, apague o componente e a chamada dele. */
+function ProvaFinalBanner({ onOpen }: { onOpen: () => void }) {
+  // Nasce escondida e só aparece depois de ler a preferência: o contrário
+  // mostraria por um instante um anúncio que a pessoa já dispensou.
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void getPref(BANNER_PREF).then((value) => {
+      if (alive && value !== "off") setShow(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!show) return null;
+
   return (
-    <div className="flex items-center gap-4">
-      <div className="relative shrink-0" style={{ width: size, height: size }}>
-        <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }} aria-hidden>
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke="var(--color-line-soft)"
-            strokeWidth={stroke}
-          />
-          {total > 0 &&
-            slices.map((s) => {
-              const length = (s.value / total) * circumference;
-              const dash = `${length} ${circumference - length}`;
-              const el = (
-                <circle
-                  key={s.label}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={r}
-                  fill="none"
-                  stroke={s.color}
-                  strokeWidth={stroke}
-                  strokeDasharray={dash}
-                  strokeDashoffset={-offset}
-                />
-              );
-              offset += length;
-              return el;
-            })}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {/* Pontos, não percentual: o módulo do fixture soma 102, então "% do
-              total" mostraria 102% e pareceria bug. A escala real é em pontos. */}
-          <span className="font-mono text-base font-medium text-fg tabular">
-            {Math.round(total * 100)}
-          </span>
-          <span className="text-[0.5rem] uppercase tracking-[0.04em] text-fg-muted">pontos</span>
-        </div>
-      </div>
-      <ul className="min-w-0 flex-1 space-y-1.5">
-        {slices.map((s) => (
-          <li key={s.label} className="flex items-center gap-2 text-xs">
-            <span
-              aria-hidden
-              className="size-2 shrink-0 rounded-full"
-              style={{ background: s.color }}
-            />
-            <span className="min-w-0 flex-1 truncate text-fg-soft">{s.label}</span>
-            <span className="shrink-0 font-mono text-fg tabular">{Math.round(s.value * 100)}</span>
-            <span className="w-10 shrink-0 text-right font-mono text-[0.62rem] text-fg-muted tabular">
-              {total > 0 ? `${((s.value / total) * 100).toFixed(0)}%` : "—"}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Card
+      className={cn(
+        "group flex cursor-pointer items-center gap-3 border-orange/40 bg-orange/[0.07] px-4 py-2.5",
+        "transition-colors duration-150 hover:bg-orange/[0.13] focus-visible:border-orange focus-visible:outline-none",
+      )}
+      {...cardShortcut("Abrir a preparação para a prova", onOpen)}
+    >
+      <GraduationCap size={16} aria-hidden className="shrink-0 text-orange" />
+      <Badge color="var(--color-orange)" className="shrink-0 tracking-[0.08em]">
+        BETA
+      </Badge>
+      <p className="min-w-0 flex-1 text-xs text-fg-soft">
+        <span className="font-medium text-fg">Novo: estudar para a prova.</span> Simulado no formato
+        do Inteli, plano de estudo e preparação de demo e desafio, com o conteúdo do seu módulo.
+      </p>
+      <ChevronRight
+        size={14}
+        aria-hidden
+        className="shrink-0 text-fg-muted transition-transform duration-150 group-hover:translate-x-0.5"
+      />
+      {/* O X é um alvo dentro de um alvo: sem parar a propagação, fechar o
+          anúncio abriria a tela junto. */}
+      <button
+        type="button"
+        aria-label="Dispensar o aviso"
+        onClick={(e) => {
+          stopCardClick(e);
+          setShow(false);
+          void setPref(BANNER_PREF, "off");
+        }}
+        className="-mr-1 shrink-0 rounded p-1 text-fg-muted transition-colors hover:text-fg"
+      >
+        <X size={14} aria-hidden />
+      </button>
+    </Card>
   );
 }
 
@@ -368,6 +377,7 @@ export function Overview({
   onOpenWeek,
   onOpenActivity,
   onSeeStudents,
+  onProvaFinal,
   news,
   newsLoading,
   theme,
@@ -387,6 +397,10 @@ export function Overview({
   onOpenWeek?: (week: string) => void;
   onOpenActivity: (activity: ActivityView) => void;
   onSeeStudents?: () => void;
+  /** Abre a preparação para a prova final — tela inteira, como o kanban e o
+   *  grupo: é outra pergunta, e dividir a atenção com o dashboard do módulo
+   *  tiraria dela o pouco de foco que ela pede. */
+  onProvaFinal: () => void;
   news: NewsItem[] | null;
   newsLoading?: boolean;
   theme: Theme;
@@ -451,9 +465,14 @@ export function Overview({
     { label: "Prova", value: m.pesosPorTipo.Prova ?? 0, color: CATEGORY_COLOR.Prova! },
     { label: "Grupo", value: m.pesosPorTipo.Grupo ?? 0, color: CATEGORY_COLOR.Grupo! },
   ].filter((s) => s.value > 0);
+  const totalPeso = slices.reduce((sum, s) => sum + s.value, 0);
 
   return (
     <div className="space-y-4">
+      {/* Antes de tudo, inclusive do cabeçalho: é anúncio, e anúncio que começa
+          no meio da página não é visto. */}
+      <ProvaFinalBanner onOpen={onProvaFinal} />
+
       {/* `min-h-12` dá folga acima e abaixo do item mais alto (os botões, 36px):
           sem ela a régua encostava nas duas bordas da faixa e o conjunto lia
           como esticado em vez de centrado.
@@ -544,7 +563,13 @@ export function Overview({
         <Card className={cn("p-4", SHORTCUT_CLASS)} {...shortcut("Distribuição do peso", openNotas)}>
           <CardTitle>Distribuição do peso</CardTitle>
           <div className="mt-3 grid gap-5 sm:grid-cols-[auto_1fr]">
-            <DistributionDonut slices={slices} />
+            {/* Pontos, não percentual: o módulo do fixture soma 102, então "% do
+                total" mostraria 102% e pareceria bug. A escala real é em pontos. */}
+            <Donut
+              slices={slices}
+              center={{ value: String(Math.round(totalPeso * 100)), label: "pontos" }}
+              formatValue={(v) => String(Math.round(v * 100))}
+            />
             <div className="min-w-0 border-line sm:border-l sm:pl-5">
               <ProgressBars view={view} />
             </div>
@@ -577,7 +602,19 @@ export function Overview({
           value={tab}
           onChange={setTab}
         />
-        <div className="ml-auto">
+        {/* À esquerda do resumo: os dois falam com IA, mas este é o que tem
+            hora marcada — e, no fim do módulo, é o primeiro que se procura.
+            A classe é a MESMA do botão do resumo (ver ~/ai/SummaryButton), para
+            os dois serem o mesmo objeto na fileira e não dois parecidos. */}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onProvaFinal}
+            className={AI_BUTTON_CLASS}
+          >
+            <GraduationCap size={14} aria-hidden />
+            Estudar para prova
+          </button>
           <SummaryButton view={view} />
         </div>
       </div>
