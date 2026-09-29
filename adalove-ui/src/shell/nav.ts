@@ -3,6 +3,7 @@ import {
   BookOpen,
   Briefcase,
   CalendarDays,
+  ChartLine,
   FileText,
   Globe2,
   GraduationCap,
@@ -27,6 +28,7 @@ export type RouteId =
   | "prova-final"
   | "perfil"
   | "nao-encontrada"
+  | "metricas"
   | "noticias"
   | "financeiro"
   | "cardapio"
@@ -49,6 +51,7 @@ export interface NavItem {
 /** Uso diário. "Acadêmico" no menu do Adalove é a nossa Visão geral. */
 export const PRIMARY_ITEMS: NavItem[] = [
   { id: "overview", label: "Acadêmico", icon: LayoutDashboard },
+  { id: "metricas", label: "Métricas avançadas", icon: ChartLine },
   { id: "noticias", label: "Notícias", icon: Newspaper },
   { id: "financeiro", label: "Financeiro", icon: Wallet },
   { id: "cardapio", label: "Cardápio", icon: UtensilsCrossed },

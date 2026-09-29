@@ -14,10 +14,15 @@
   "host_permissions": [
     "https://adalove.inteli.edu.br/*",
     "https://apiv2.inteli.edu.br/*",
+    "https://script.google.com/*",
     "https://www.gradesinteli.com/*",
     "https://gradesinteli.com/*",
     "http://localhost/*"
   ],
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
   "content_scripts": [
     {
       "matches": [

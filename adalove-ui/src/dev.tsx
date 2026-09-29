@@ -7,6 +7,7 @@ import App from "~/App";
 import { Login } from "~/screens/Login";
 import { SkeletonShell } from "~/ui/Skeleton";
 import { fixtureNameFor, type ApiClient } from "~/data/api";
+import { FichaError, type Ficha } from "~/data/ficha";
 import { avatarUrl, type AdaloveUser } from "~/data/client";
 import type { RawUserdata } from "~/data/types";
 import type { RouteId } from "~/shell/nav";
@@ -291,6 +292,13 @@ async function boot() {
         raw={mod.default}
         initialRoute={route ?? undefined}
         api={devApi}
+        // A ficha vem de `fixtures/ficha.json` (o `window.FICHA_INLINE` copiado da
+        // página do Apps Script). Sem o arquivo, a tela mostra o estado de erro.
+        fetchFicha={async () => {
+          const load = ALL_FIXTURES["../fixtures/ficha.json"];
+          if (!load) throw new FichaError("unavailable");
+          return (await load()).default as Ficha;
+        }}
         // Sem localStorage do Adalove aqui: o usuário vem do fixture de
         // /users/details, o que exercita a foto real e o fallback de erro.
         user={devUser}

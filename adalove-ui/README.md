@@ -40,6 +40,7 @@ compartilhável. O mapa é `src/shell/routes.ts`:
 |---|---|
 | `overview` | `/academic-life` (e `/`) |
 | `atividades` / `grupo` / `prova-final` | `/academic-life/atividades`, `/academic-life/grupo`, `/academic-life/prova-final` (sintéticos: não existem no Adalove) |
+| `metricas` | `/academic-life/metricas` (sintético: vem da Ficha do aluno, não do Adalove) |
 | `perfil` | `/profile` |
 | `noticias` | `/feed` |
 | `financeiro` | `/financial` |
@@ -95,6 +96,20 @@ do navegador**. Status: `1 = A fazer`, `2 = Fazendo`, `3 = Feito`.
 
 Se a chamada direta falhar, cai para o `lastCapture` que o `adalove-interceptor.js` já grava.
 
+### Métricas avançadas (Ficha do aluno)
+
+A tela `metricas` não fala com o Adalove: os dados são da **Ficha do aluno**, um Apps Script do
+domínio `sou.inteli.edu.br` que só abre com o login Google do aluno. O `exec` devolve uma página
+que embrulha o HTML do script num `goog.script.init("…")`, e dentro dele está
+`window.FICHA_INLINE = {…}` — o payload inteiro, sem precisar rodar o JS de lá.
+
+Quem busca é o `../extension/background.js` (o content script não consegue: a resposta não tem
+CORS e o cookie é do Google). A tela pede com `runtime.sendMessage({type: "gi:ficha"})`; os tipos
+estão em `src/data/ficha.ts`. Sem sessão Google o fetch cai em `accounts.google.com`, e a tela
+oferece abrir a ficha para entrar. No harness de dev o payload vem de `fixtures/ficha.json` —
+copie com `copy(JSON.stringify(window.FICHA_INLINE, null, 2))` no Console, no frame
+`userHtmlFrame` da ficha.
+
 ## Estrutura
 
 ```
@@ -105,11 +120,11 @@ src/
   theme.css      Tailwind v4 com os tokens do GradesInteli
   data/          client (API), auth (login/logout no Cognito), viewmodel (JSON → telas),
                  activityTypes (tabela oficial), gradeRevision (pedido de revisão),
-                 organization (tags, tarefas, anotações)
+                 organization (tags, tarefas, anotações), ficha (Métricas avançadas)
   ui/            primitivas (Card, Button, Badge, Table, Tabs, Modal, Html, …)
   shell/         Sidebar, mapa de rotas (routes.ts) e navegação por URL (history.ts)
   screens/       Login, Overview, Atividades, Notas, Faltas, Grupo, ProvaFinal, ActivityModal,
-                 ActivityOrganization, GradeRevision
+                 ActivityOrganization, GradeRevision, MetricasAvancadas
   ai/            prompt.ts / summary.ts / exam.ts (puros), providers.ts, AskAiButton
 ```
 

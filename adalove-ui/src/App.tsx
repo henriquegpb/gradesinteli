@@ -8,6 +8,7 @@ import {
 } from "@/types/grades";
 import { ApiProvider, useApiClient, type ApiClient } from "~/data/api";
 import { AdaloveAuthError, type ActivityFields, type AdaloveUser } from "~/data/client";
+import type { Ficha } from "~/data/ficha";
 import { normalizeNews, type NewsItem } from "~/data/news";
 import { getPref, setPref } from "~/lib/prefs";
 import type { Theme } from "~/shell/HeaderActions";
@@ -27,6 +28,7 @@ import { Carreiras } from "~/screens/Carreiras";
 import { Financeiro } from "~/screens/Financeiro";
 import { Historico } from "~/screens/Historico";
 import { Intercambio } from "~/screens/Intercambio";
+import { MetricasAvancadas } from "~/screens/MetricasAvancadas";
 import { NaoEncontrada } from "~/screens/NaoEncontrada";
 import { Noticias } from "~/screens/Noticias";
 import { Pagina, type PageSlug } from "~/screens/Pagina";
@@ -61,6 +63,9 @@ export interface AppProps {
   initialRoute?: RouteId;
   /** Notícias do Adalove. Ausente no dev: o card mostra o estado vazio. */
   fetchNews?: () => Promise<unknown>;
+  /** Ficha do aluno (Apps Script da Inteli). Ausente fora da extensão e sem
+   *  fixture: a tela de Métricas avançadas explica que não há dados. */
+  fetchFicha?: () => Promise<Ficha>;
   /** Usuário logado, lido do localStorage do Adalove. */
   user?: AdaloveUser | null;
   /** Encerra a sessão do Adalove. Ausente no harness de dev. */
@@ -94,6 +99,7 @@ function Workspace({
   persistFields,
   initialRoute,
   fetchNews,
+  fetchFicha,
   user = null,
   onLogout,
 }: AppProps) {
@@ -548,6 +554,9 @@ function Workspace({
         )}
         {route === "perfil" && (
           <Perfil view={view} user={user} onBack={() => setRoute("overview")} />
+        )}
+        {route === "metricas" && (
+          <MetricasAvancadas fetchFicha={fetchFicha} onBack={() => setRoute("overview")} />
         )}
         {route === "noticias" && <Noticias onBack={() => setRoute("overview")} />}
         {route === "financeiro" && <Financeiro onBack={() => setRoute("overview")} />}

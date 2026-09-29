@@ -18,6 +18,8 @@ export const ROUTE_PATHS: Record<RouteId, string> = {
   atividades: "/academic-life/atividades",
   grupo: "/academic-life/grupo",
   "prova-final": "/academic-life/prova-final",
+  // Vem da Ficha do aluno (Apps Script da Inteli), que o Adalove não tem.
+  metricas: "/academic-life/metricas",
 
   // Onde o Adalove larga quem abriu um endereço que ele não conhece. É rota
   // nossa para que o link quebrado não jogue a pessoa no 404 deles no meio da
