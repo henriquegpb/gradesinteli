@@ -37,20 +37,36 @@ function normalize(svg: string): string {
   });
 }
 
-const SVGS = {
-  claude: normalize(claudeRaw),
-  openai: normalize(openaiRaw),
-  gemini: normalize(geminiRaw),
-  drive: normalize(driveRaw),
-  google: normalize(googleRaw),
-  github: normalize(githubRaw),
-  gitlab: normalize(gitlabRaw),
-  facebook: normalize(facebookRaw),
-  instagram: normalize(instagramRaw),
-  linkedin: normalize(linkedinRaw),
-  slack: normalize(slackRaw),
-  youtube: normalize(youtubeRaw),
+/** Inline, os ids de `<defs>` viram globais da página. O Drive e o Google usam
+ *  ambos `a`, `b`, `c`… — e `url(#b)` resolve para o PRIMEIRO `#b` do
+ *  documento, então um logo pintava com o gradiente do outro (ou com algum id
+ *  da própria página do Adalove). Prefixar por logo isola cada um. Duas cópias
+ *  do mesmo logo repetem ids, mas com defs idênticas, então tanto faz qual vence. */
+function scopeIds(svg: string, prefix: string): string {
+  return svg
+    .replace(/\sid="([^"]+)"/g, (_, id: string) => ` id="gi-${prefix}-${id}"`)
+    .replace(/url\(#([^)]+)\)/g, (_, id: string) => `url(#gi-${prefix}-${id})`)
+    .replace(/href="#([^"]+)"/g, (_, id: string) => `href="#gi-${prefix}-${id}"`);
+}
+
+const RAW = {
+  claude: claudeRaw,
+  openai: openaiRaw,
+  gemini: geminiRaw,
+  drive: driveRaw,
+  google: googleRaw,
+  github: githubRaw,
+  gitlab: gitlabRaw,
+  facebook: facebookRaw,
+  instagram: instagramRaw,
+  linkedin: linkedinRaw,
+  slack: slackRaw,
+  youtube: youtubeRaw,
 } as const;
+
+const SVGS = Object.fromEntries(
+  Object.entries(RAW).map(([name, raw]) => [name, scopeIds(normalize(raw), name)]),
+) as Record<keyof typeof RAW, string>;
 
 export type LogoName = keyof typeof SVGS;
 
@@ -66,15 +82,18 @@ const ACHROMATIC = /^(#fff{1,3}|#ffffff|white|#000|#000000|black|currentColor)$/
  *  porque a cor não é da marca, é do fundo para o qual o arquivo foi feito.
  *  Esses seguem a cor do texto sempre, sem o caller precisar saber.
  *
- *  `url(…)` fica de fora: é gradiente, e gradiente é cor de marca (Drive,
- *  Google). `mask-type:alpha` também não conta — o preto lá dentro é recorte,
- *  não pintura —, mas isso se resolve sozinho: um logo com máscara tem cores de
- *  verdade no desenho e não cai neste caminho. */
+ *  `url(…)` é gradiente, e gradiente é cor de marca (Drive, Google): basta um
+ *  para o logo não ser silhueta. E o que está dentro de `<mask>` não conta — o
+ *  branco ou preto lá é recorte, não pintura. O Drive caía aqui justamente por
+ *  isso: a máscara é `#fff` e o resto é gradiente, então o único fill "visível"
+ *  era o branco do recorte, e o logo virava um triângulo cinza. */
 function isSilhouette(svg: string): boolean {
-  const visible = [...svg.matchAll(/fill(?:="|:)\s*([^";]+)/gi)]
+  const painted = svg.replace(/<mask[\s\S]*?<\/mask>/gi, "");
+  const fills = [...painted.matchAll(/fill(?:="|:)\s*([^";]+)/gi)]
     .map((m) => m[1]!.trim())
-    .filter((f) => f !== "none" && !f.startsWith("url("));
-  return visible.length > 0 && visible.every((f) => ACHROMATIC.test(f));
+    .filter((f) => f !== "none");
+  if (fills.some((f) => f.startsWith("url("))) return false;
+  return fills.length > 0 && fills.every((f) => ACHROMATIC.test(f));
 }
 
 /** Deixa o logo seguir a cor do botão, para funcionar nos dois temas.
