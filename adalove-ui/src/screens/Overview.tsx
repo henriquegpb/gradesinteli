@@ -346,19 +346,19 @@ function AttendanceCard({ view, onOpen }: { view: SectionView; onOpen?: () => vo
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-soft">
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: "#2FAA5C" }} />
+          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: "var(--color-presente)" }} />
           Presente <span className="font-mono text-fg tabular">{u.fmt(a.presentes)}</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: "#0777DB" }} />
+          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: "var(--color-justificado)" }} />
           Justificado <span className="font-mono text-fg tabular">{u.fmt(a.justificados)}</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: "#F05086" }} />
+          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: "var(--color-falta)" }} />
           Faltas <span className="font-mono text-fg tabular">{u.fmt(a.faltas)}</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: "#B3B3C3" }} />
+          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: "var(--color-futuro)" }} />
           A avaliar <span className="font-mono text-fg tabular">{u.fmt(a.futuros)}</span>
         </span>
       </div>

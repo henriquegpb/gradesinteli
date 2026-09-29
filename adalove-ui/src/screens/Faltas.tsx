@@ -9,10 +9,10 @@ import { Card, CardTitle } from "~/ui/Card";
 import { Table, TableContainer, Td, Th } from "~/ui/Table";
 
 const STATUS_STYLE: Record<PresencaStatus, { label: string; color: string }> = {
-  presente: { label: "Presente", color: "#2FAA5C" },
-  justificado: { label: "Justificado", color: "#0777DB" },
-  falta: { label: "Falta", color: "#F05086" },
-  futuro: { label: "—", color: "#B3B3C3" },
+  presente: { label: "Presente", color: "var(--color-presente)" },
+  justificado: { label: "Justificado", color: "var(--color-justificado)" },
+  falta: { label: "Falta", color: "var(--color-falta)" },
+  futuro: { label: "—", color: "var(--color-futuro)" },
 };
 
 function Dot({ status }: { status: PresencaStatus }) {
