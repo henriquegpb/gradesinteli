@@ -66,6 +66,8 @@ export interface AppProps {
   /** Ficha do aluno (Apps Script da Inteli). Ausente fora da extensão e sem
    *  fixture: a tela de Métricas avançadas explica que não há dados. */
   fetchFicha?: () => Promise<Ficha>;
+  /** Pede a permissão opcional de script.google.com (janela da extensão). */
+  authorizeFicha?: () => Promise<void>;
   /** Usuário logado, lido do localStorage do Adalove. */
   user?: AdaloveUser | null;
   /** Encerra a sessão do Adalove. Ausente no harness de dev. */
@@ -100,6 +102,7 @@ function Workspace({
   initialRoute,
   fetchNews,
   fetchFicha,
+  authorizeFicha,
   user = null,
   onLogout,
 }: AppProps) {
@@ -556,7 +559,10 @@ function Workspace({
           <Perfil view={view} user={user} onBack={() => setRoute("overview")} />
         )}
         {route === "metricas" && (
-          <MetricasAvancadas fetchFicha={fetchFicha} onBack={() => setRoute("overview")} />
+          <MetricasAvancadas
+            fetchFicha={fetchFicha}
+            authorizeFicha={authorizeFicha}
+            onBack={() => setRoute("overview")} />
         )}
         {route === "noticias" && <Noticias onBack={() => setRoute("overview")} />}
         {route === "financeiro" && <Financeiro onBack={() => setRoute("overview")} />}

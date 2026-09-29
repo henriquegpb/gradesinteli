@@ -136,7 +136,9 @@ export interface Ficha {
   provas: { prova_id: string; ordem: number; nome: string; peso: number; semana: number }[];
 }
 
-export type FichaErro = "login" | "network" | "http" | "format" | "unavailable";
+/** `permission`: o aluno ainda não autorizou script.google.com (é permissão
+ *  opcional, pedida no clique — ver `authorizeFicha`). */
+export type FichaErro = "permission" | "login" | "network" | "http" | "format" | "unavailable";
 
 export class FichaError extends Error {
   constructor(
@@ -171,4 +173,25 @@ export function fetchFicha(): Promise<Ficha> {
     throw error;
   });
   return cached;
+}
+
+const GRANTED_KEY = "fichaAccessGrantedAt";
+
+/** Abre a janelinha da extensão que pede a permissão e resolve quando o aluno
+ *  concede. Não rejeita se ele fechar sem aceitar: a tela continua mostrando o
+ *  botão, e clicar de novo reabre a mesma janela. */
+export function authorizeFicha(): Promise<void> {
+  const storage = ext?.storage;
+  if (!ext?.runtime?.sendMessage || !storage) return Promise.reject(new FichaError("unavailable"));
+
+  return new Promise<void>((resolve) => {
+    const onChanged = (changes: Record<string, unknown>, area: string) => {
+      if (area !== "local" || !(GRANTED_KEY in changes)) return;
+      storage.onChanged.removeListener(onChanged);
+      cached = null;
+      resolve();
+    };
+    storage.onChanged.addListener(onChanged);
+    void ext!.runtime.sendMessage({ type: "gi:ficha-authorize" });
+  });
 }

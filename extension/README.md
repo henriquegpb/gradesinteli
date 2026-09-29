@@ -57,6 +57,7 @@ No Adalove logado aparecem dois botões nos cantos de baixo:
 | `dist/adalove-ui.js` | isolado | adalove.inteli.edu.br | A interface nova (shadow root) e o botão que liga ela |
 | `adalove-capture.js` | MAIN | adalove.inteli.edu.br | Ferramenta de desenvolvimento: grava os payloads de uma página para reconstruí-la |
 | `background.js` | worker | — | Busca a Ficha do aluno (Apps Script da Inteli) com o login Google, para a tela de Métricas avançadas |
+| `authorize.html` / `.js` | página | janela da extensão | Pede a permissão opcional de `script.google.com` no clique |
 | `grades-content.js` | isolado | www.gradesinteli.com | Entrega os dados à página via `postMessage` |
 
 O app escuta `window.postMessage({ type: "GRADESINTELI_IMPORT", payload })` em

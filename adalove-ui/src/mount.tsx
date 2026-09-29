@@ -23,7 +23,7 @@ import {
   resolveSectionUuid,
   setTokenRefresher,
 } from "~/data/client";
-import { fetchFicha } from "~/data/ficha";
+import { authorizeFicha, fetchFicha } from "~/data/ficha";
 import { Login } from "~/screens/Login";
 import type { ApiClient } from "~/data/api";
 import type { RawUserdata } from "~/data/types";
@@ -317,6 +317,7 @@ export async function mountOverlay() {
         persistFields={putActivityFields}
         fetchNews={fetchNews}
         fetchFicha={fetchFicha}
+        authorizeFicha={authorizeFicha}
         user={currentUser()}
         onLogout={logout}
         api={API}

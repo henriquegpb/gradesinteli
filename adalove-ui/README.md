@@ -105,8 +105,15 @@ que embrulha o HTML do script num `goog.script.init("…")`, e dentro dele está
 
 Quem busca é o `../extension/background.js` (o content script não consegue: a resposta não tem
 CORS e o cookie é do Google). A tela pede com `runtime.sendMessage({type: "gi:ficha"})`; os tipos
-estão em `src/data/ficha.ts`. Sem sessão Google o fetch cai em `accounts.google.com`, e a tela
-oferece abrir a ficha para entrar. No harness de dev o payload vem de `fixtures/ficha.json` —
+estão em `src/data/ficha.ts`. Sem sessão Google o `exec` redireciona para o login, e a tela
+oferece abrir a ficha para entrar.
+
+`script.google.com` é **permissão opcional** (`optional_host_permissions`): pedida no install, ela
+desativaria a extensão de quem já a tem até aceitar, sem ninguém saber por quê. Na primeira visita
+à tela o worker responde `permission`, a tela mostra o card "Autorizar acesso", e o clique abre
+`../extension/authorize.html` — o Chrome só aceita `permissions.request` vindo de uma página da
+extensão, com gesto do usuário. Ao conceder, a página grava `fichaAccessGrantedAt` no storage e a
+tela recarrega sozinha. No harness, `?ficha=permission` simula esse estado. No harness de dev o payload vem de `fixtures/ficha.json` —
 copie com `copy(JSON.stringify(window.FICHA_INLINE, null, 2))` no Console, no frame
 `userHtmlFrame` da ficha.
 

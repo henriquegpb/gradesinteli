@@ -13,6 +13,11 @@ const FICHA_URL =
 
 const api = globalThis.browser ?? globalThis.chrome;
 
+// Permissão OPCIONAL (optional_host_permissions): pedir no install desativaria
+// a extensão de quem já a tem até aceitar, e ninguém saberia por quê. Ela é
+// pedida pela própria tela de Métricas avançadas, no clique — ver authorize.html.
+const FICHA_ORIGINS = ["https://script.google.com/*"];
+
 /** Decodifica o CONTEÚDO de um literal de string JS (sem as aspas). O Google
  *  escapa tudo como `\x7b`, `\x22`, `\/`… e `eval` não é opção num worker MV3. */
 function unescapeJs(s) {
@@ -83,25 +88,76 @@ function parseFicha(page) {
 }
 
 async function fetchFicha() {
+  if (!(await api.permissions.contains({ origins: FICHA_ORIGINS }))) {
+    return { ok: false, reason: "permission" };
+  }
+
   let res;
   try {
-    res = await fetch(FICHA_URL, { credentials: "include", redirect: "follow" });
+    // `manual`: com sessão, o exec responde 200 direto. Sem sessão, o Google
+    // redireciona para accounts.google.com — onde não temos permissão, então
+    // seguir o redirect viraria um erro de rede genérico em vez de "entre".
+    res = await fetch(FICHA_URL, { credentials: "include", redirect: "manual" });
   } catch {
     return { ok: false, reason: "network" };
   }
 
-  // Sem sessão Google da Inteli, o Google redireciona para a tela de login.
-  if (new URL(res.url).hostname === "accounts.google.com") return { ok: false, reason: "login" };
+  if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
+    // Nem todo redirect é falta de sessão (o Google às vezes ajusta a conta na
+    // URL). Segue uma vez: se cair no login, o fetch quebra por falta de
+    // permissão lá, e aí sim é "entre com o Google".
+    try {
+      res = await fetch(FICHA_URL, { credentials: "include", redirect: "follow" });
+    } catch {
+      return { ok: false, reason: "login" };
+    }
+    if (new URL(res.url).hostname === "accounts.google.com") return { ok: false, reason: "login" };
+  }
   if (!res.ok) return { ok: false, reason: "http", status: res.status };
 
   const data = parseFicha(await res.text());
   return data ? { ok: true, data, url: FICHA_URL } : { ok: false, reason: "format" };
 }
 
+/** Janela pequena com o botão que pede a permissão. Uma só: clicar de novo em
+ *  "Autorizar" traz a mesma para a frente em vez de empilhar outra. */
+let authWindowId = null;
+
+async function openAuthorize() {
+  if (authWindowId != null) {
+    try {
+      await api.windows.update(authWindowId, { focused: true });
+      return;
+    } catch {
+      authWindowId = null; // já foi fechada
+    }
+  }
+  const win = await api.windows.create({
+    url: api.runtime.getURL("authorize.html"),
+    type: "popup",
+    width: 440,
+    height: 460,
+  });
+  authWindowId = win?.id ?? null;
+}
+
+api?.windows?.onRemoved.addListener((id) => {
+  if (id === authWindowId) authWindowId = null;
+});
+
 api?.runtime?.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== "gi:ficha") return false;
-  fetchFicha().then(sendResponse, () => sendResponse({ ok: false, reason: "network" }));
-  return true; // resposta assíncrona
+  if (msg?.type === "gi:ficha") {
+    fetchFicha().then(sendResponse, () => sendResponse({ ok: false, reason: "network" }));
+    return true; // resposta assíncrona
+  }
+  if (msg?.type === "gi:ficha-authorize") {
+    openAuthorize().then(
+      () => sendResponse({ ok: true }),
+      () => sendResponse({ ok: false }),
+    );
+    return true;
+  }
+  return false;
 });
 
 // Exportado só para o teste em node; no navegador `module` não existe.

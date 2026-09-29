@@ -8,11 +8,14 @@ import { Login } from "~/screens/Login";
 import { SkeletonShell } from "~/ui/Skeleton";
 import { fixtureNameFor, type ApiClient } from "~/data/api";
 import { FichaError, type Ficha } from "~/data/ficha";
+
 import { avatarUrl, type AdaloveUser } from "~/data/client";
 import type { RawUserdata } from "~/data/types";
 import type { RouteId } from "~/shell/nav";
 import "~/theme.css";
 
+/** `?ficha=permission`: simula a primeira visita, antes de autorizar. */
+let devFichaNeedsPermission = new URLSearchParams(location.search).get("ficha") === "permission";
 const FIXTURES = import.meta.glob<{ default: RawUserdata }>("../fixtures/*.json");
 const ALL_FIXTURES = import.meta.glob<{ default: unknown }>("../fixtures/*.json");
 
@@ -292,9 +295,16 @@ async function boot() {
         raw={mod.default}
         initialRoute={route ?? undefined}
         api={devApi}
+        authorizeFicha={async () => {
+          await new Promise((r) => setTimeout(r, 600));
+          devFichaNeedsPermission = false;
+        }}
         // A ficha vem de `fixtures/ficha.json` (o `window.FICHA_INLINE` copiado da
         // página do Apps Script). Sem o arquivo, a tela mostra o estado de erro.
+        // `?ficha=permission` mostra o card de autorização; o "Permitir" daqui
+        // só espera um instante e libera, sem janela.
         fetchFicha={async () => {
+          if (devFichaNeedsPermission) throw new FichaError("permission");
           const load = ALL_FIXTURES["../fixtures/ficha.json"];
           if (!load) throw new FichaError("unavailable");
           return (await load()).default as Ficha;

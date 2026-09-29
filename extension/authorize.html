@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Autorizar Métricas avançadas</title>
+    <!-- Página da extensão só para pedir a permissão de script.google.com: o
+         Chrome não deixa um content script chamar permissions.request, e o
+         pedido precisa nascer de um clique numa página nossa. -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0e0e10;
+        --surface: #16161a;
+        --line: #2a2a30;
+        --fg: #e0e0e4;
+        --fg-soft: #a0a0aa;
+        --fg-muted: #5c5c66;
+        --accent: #2686ff;
+        --red: #e85454;
+      }
+      * { box-sizing: border-box; margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+      }
+      main {
+        width: 100%;
+        max-width: 380px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 20px;
+      }
+      .label {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+      }
+      h1 { font-size: 16px; font-weight: 500; margin-top: 6px; }
+      p { color: var(--fg-soft); font-size: 13px; margin-top: 10px; }
+      code { font-size: 12px; color: var(--fg); }
+      ul { color: var(--fg-soft); font-size: 13px; margin-top: 10px; padding-left: 18px; }
+      li + li { margin-top: 4px; }
+      button {
+        margin-top: 18px;
+        width: 100%;
+        height: 36px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      button:hover { opacity: 0.9; }
+      #status { min-height: 1.5em; font-size: 12px; margin-top: 10px; }
+      #status.error { color: var(--red); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="label">Métricas avançadas</div>
+      <h1>Permitir acesso à Ficha do aluno</h1>
+      <p>
+        As métricas vêm da Ficha do aluno da Inteli, em <code>script.google.com</code>. Para
+        buscá-la com o seu login Google, a extensão precisa da sua permissão.
+      </p>
+      <ul>
+        <li>Só a ficha é lida, nada mais do Google.</li>
+        <li>Os dados ficam no seu navegador e não vão para nenhum servidor.</li>
+        <li>Dá para revogar quando quiser em <code>chrome://extensions</code>.</li>
+      </ul>
+      <button id="allow" type="button">Permitir</button>
+      <div id="status" role="status"></div>
+    </main>
+    <script src="authorize.js"></script>
+  </body>
+</html>

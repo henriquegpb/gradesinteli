@@ -866,6 +866,7 @@ const TABS: { label: string; value: Tab }[] = [
 ];
 
 const ERRORS: Record<FichaError["reason"], string> = {
+  permission: "",
   login:
     "Entre na sua conta Google do Inteli (@sou.inteli.edu.br) neste navegador para ver suas métricas.",
   network:
@@ -876,11 +877,53 @@ const ERRORS: Record<FichaError["reason"], string> = {
   unavailable: "As métricas avançadas só funcionam dentro da extensão.",
 };
 
+/** Primeira visita: a permissão de script.google.com é opcional e só é pedida
+ *  aqui, no clique — então este card é o único lugar em que o aluno descobre
+ *  que ela existe e para que serve. */
+function Autorizar({ onAuthorize }: { onAuthorize?: () => Promise<void> }) {
+  const [waiting, setWaiting] = useState(false);
+
+  return (
+    <Card className="p-6">
+      <CardTitle>Falta um passo</CardTitle>
+      <h2 className="mt-2 text-base font-medium text-fg">Autorize o acesso à Ficha do aluno</h2>
+      <p className="mt-2 max-w-2xl text-sm text-fg-soft">
+        Estas métricas vêm da Ficha do aluno da Inteli, que fica no Google (
+        <span className="font-mono text-xs">script.google.com</span>). A extensão busca a ficha com o seu
+        login Google do Inteli e mostra aqui. Os dados não saem do seu navegador.
+      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button
+          variant="primary"
+          disabled={!onAuthorize}
+          onClick={() => {
+            if (!onAuthorize) return;
+            setWaiting(true);
+            // Não há "recusou" para ouvir: se a janela fechar sem aceitar, o botão
+            // volta a funcionar no próximo clique, que a reabre.
+            void onAuthorize().finally(() => setWaiting(false));
+            setTimeout(() => setWaiting(false), 4000);
+          }}
+        >
+          Autorizar acesso
+        </Button>
+        <span className="text-xs text-fg-muted">
+          {waiting
+            ? "Clique em Permitir na janela que abriu."
+            : "Abre uma janela da extensão e o navegador confirma a permissão."}
+        </span>
+      </div>
+    </Card>
+  );
+}
+
 export function MetricasAvancadas({
   fetchFicha,
+  authorizeFicha,
   onBack,
 }: {
   fetchFicha?: () => Promise<Ficha>;
+  authorizeFicha?: () => Promise<void>;
   onBack?: () => void;
 }) {
   const [ficha, setFicha] = useState<Ficha | null>(null);
@@ -966,7 +1009,15 @@ export function MetricasAvancadas({
         </div>
       )}
 
-      {error && !loading && (
+      {error === "permission" && !loading && (
+        <Autorizar onAuthorize={authorizeFicha &&
+            (() =>
+              authorizeFicha().then(() => {
+                load();
+              }))} />
+      )}
+
+      {error && error !== "permission" && !loading && (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-6">
           <p className="text-sm text-fg-soft">{ERRORS[error]}</p>
           <div className="flex gap-2">
