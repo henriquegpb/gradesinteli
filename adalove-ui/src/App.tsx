@@ -65,7 +65,7 @@ export interface AppProps {
   fetchNews?: () => Promise<unknown>;
   /** Ficha do aluno (Apps Script da Inteli). Ausente fora da extensão e sem
    *  fixture: a tela de Métricas avançadas explica que não há dados. */
-  fetchFicha?: () => Promise<Ficha>;
+  fetchFicha?: (sectionId?: number) => Promise<Ficha>;
   /** Pede a permissão opcional de script.google.com (janela da extensão). */
   authorizeFicha?: () => Promise<void>;
   /** Usuário logado, lido do localStorage do Adalove. */

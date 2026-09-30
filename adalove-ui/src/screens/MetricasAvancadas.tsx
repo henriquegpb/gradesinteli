@@ -14,6 +14,7 @@ import {
   type Faixa,
   type Ficha,
   type FichaProjeto,
+  type FichaTurma,
 } from "~/data/ficha";
 import { cn } from "~/lib/cn";
 import { formatNaiveDate } from "~/lib/date";
@@ -21,6 +22,7 @@ import { gradeColor } from "~/lib/grade";
 import { Badge } from "~/ui/Badge";
 import { Button } from "~/ui/Button";
 import { Card, CardTitle } from "~/ui/Card";
+import { Select } from "~/ui/Select";
 import { Skeleton } from "~/ui/Skeleton";
 import { Tabs } from "~/ui/Tabs";
 
@@ -921,10 +923,15 @@ export function MetricasAvancadas({
   fetchFicha,
   authorizeFicha,
 }: {
-  fetchFicha?: () => Promise<Ficha>;
+  fetchFicha?: (sectionId?: number) => Promise<Ficha>;
   authorizeFicha?: () => Promise<void>;
 }) {
   const [ficha, setFicha] = useState<Ficha | null>(null);
+  /** `undefined`: a turma que a ficha escolhe (o módulo que está rodando). */
+  const [sectionId, setSectionId] = useState<number | undefined>();
+  // Fora da `ficha` para o dropdown não sumir enquanto a outra turma carrega,
+  // nem quando ela falha — é por ele que o aluno volta.
+  const [turmas, setTurmas] = useState<FichaTurma[]>([]);
   const [error, setError] = useState<FichaError["reason"] | null>(
     fetchFicha ? null : "unavailable",
   );
@@ -936,8 +943,12 @@ export function MetricasAvancadas({
     let alive = true;
     setLoading(true);
     setError(null);
-    fetchFicha()
-      .then((data) => alive && setFicha(data))
+    fetchFicha(sectionId)
+      .then((data) => {
+        if (!alive) return;
+        setFicha(data);
+        if (data.turmas?.length) setTurmas(data.turmas);
+      })
       .catch(
         (e: unknown) =>
           alive && setError(e instanceof FichaError ? e.reason : "network"),
@@ -946,7 +957,7 @@ export function MetricasAvancadas({
     return () => {
       alive = false;
     };
-  }, [fetchFicha]);
+  }, [fetchFicha, sectionId]);
 
   useEffect(load, [load]);
 
@@ -975,15 +986,32 @@ export function MetricasAvancadas({
             )}
           </p>
         </div>
-        <a
-          href={FICHA_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          Ficha original
-          <ExternalLink size={12} aria-hidden />
-        </a>
+        <div className="flex items-center gap-3">
+          {turmas.length > 1 && (
+            <Select
+              aria-label="Trimestre"
+              className="h-8 text-xs"
+              disabled={loading}
+              value={String(sectionId ?? ficha?.meta.section_id ?? "")}
+              onChange={(e) => setSectionId(Number(e.target.value))}
+            >
+              {turmas.map((t) => (
+                <option key={t.section_id} value={t.section_id}>
+                  {t.trimestre}
+                </option>
+              ))}
+            </Select>
+          )}
+          <a
+            href={FICHA_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
+          >
+            Ficha original
+            <ExternalLink size={12} aria-hidden />
+          </a>
+        </div>
       </div>
 
       {loading && (

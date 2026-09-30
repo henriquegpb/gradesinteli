@@ -134,6 +134,17 @@ export interface Ficha {
     autoestudo: Record<string, number>;
   };
   provas: { prova_id: string; ordem: number; nome: string; peso: number; semana: number }[];
+  /** O dropdown de trimestre da ficha (`window.FICHA_TURMAS`). Quem põe aqui é o
+   *  `background.js`; não vem no payload do Apps Script. */
+  turmas?: FichaTurma[];
+  /** A turma que a ficha abre sozinha — pode ser o módulo seguinte, ainda vazio. */
+  turma_padrao?: number;
+}
+
+export interface FichaTurma {
+  section_id: number;
+  trimestre: string;
+  turma: string;
 }
 
 /** `permission`: o aluno ainda não autorizou script.google.com (é permissão
@@ -157,22 +168,31 @@ type WorkerReply =
   | { ok: true; data: Ficha }
   | { ok: false; reason: Exclude<FichaErro, "unavailable"> };
 
-/** A ficha só atualiza de manhã: uma busca por carregamento da página basta, e
- *  voltar para a tela não refaz a viagem até o Google. */
-let cached: Promise<Ficha> | null = null;
+/** A ficha só atualiza de manhã: uma busca por turma e por carregamento da
+ *  página basta, e voltar para a tela (ou para um trimestre já visto) não refaz
+ *  a viagem até o Google. A chave "" é a turma que a ficha escolhe sozinha. */
+const cached = new Map<string, Promise<Ficha>>();
 
-export function fetchFicha(): Promise<Ficha> {
-  cached ??= (async () => {
-    if (!ext?.runtime?.sendMessage) throw new FichaError("unavailable");
-    const reply = (await ext.runtime.sendMessage({ type: "gi:ficha" })) as WorkerReply | undefined;
-    if (!reply) throw new FichaError("network");
-    if (!reply.ok) throw new FichaError(reply.reason, FICHA_URL);
-    return reply.data;
-  })().catch((error: unknown) => {
-    cached = null; // erro não fica em cache: o próximo clique tenta de novo
-    throw error;
-  });
-  return cached;
+/** Sem `sectionId`, a turma do módulo que está rodando; com, a do dropdown. */
+export function fetchFicha(sectionId?: number): Promise<Ficha> {
+  const key = sectionId == null ? "" : String(sectionId);
+  let pending = cached.get(key);
+  if (!pending) {
+    pending = (async () => {
+      if (!ext?.runtime?.sendMessage) throw new FichaError("unavailable");
+      const reply = (await ext.runtime.sendMessage({ type: "gi:ficha", sectionId })) as
+        | WorkerReply
+        | undefined;
+      if (!reply) throw new FichaError("network");
+      if (!reply.ok) throw new FichaError(reply.reason, FICHA_URL);
+      return reply.data;
+    })().catch((error: unknown) => {
+      cached.delete(key); // erro não fica em cache: o próximo clique tenta de novo
+      throw error;
+    });
+    cached.set(key, pending);
+  }
+  return pending;
 }
 
 const GRANTED_KEY = "fichaAccessGrantedAt";
@@ -188,7 +208,7 @@ export function authorizeFicha(): Promise<void> {
     const onChanged = (changes: Record<string, unknown>, area: string) => {
       if (area !== "local" || !(GRANTED_KEY in changes)) return;
       storage.onChanged.removeListener(onChanged);
-      cached = null;
+      cached.clear();
       resolve();
     };
     storage.onChanged.addListener(onChanged);

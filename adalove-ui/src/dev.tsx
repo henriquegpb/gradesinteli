@@ -303,11 +303,20 @@ async function boot() {
         // página do Apps Script). Sem o arquivo, a tela mostra o estado de erro.
         // `?ficha=permission` mostra o card de autorização; o "Permitir" daqui
         // só espera um instante e libera, sem janela.
-        fetchFicha={async () => {
+        // O dropdown de trimestre troca só o rótulo: o fixture é um só.
+        fetchFicha={async (sectionId) => {
           if (devFichaNeedsPermission) throw new FichaError("permission");
           const load = ALL_FIXTURES["../fixtures/ficha.json"];
           if (!load) throw new FichaError("unavailable");
-          return (await load()).default as Ficha;
+          const ficha = (await load()).default as Ficha;
+          const turmas = [
+            { section_id: 499, trimestre: "2026-1B", turma: "2026-1B-T11" },
+            { section_id: ficha.meta.section_id, trimestre: ficha.meta.trimestre, turma: ficha.meta.turma },
+            { section_id: 689, trimestre: "2026-2B", turma: "2026-2B-T33-OP05" },
+          ];
+          const alvo = turmas.find((t) => t.section_id === sectionId) ?? turmas[1]!;
+          await new Promise((r) => setTimeout(r, 400));
+          return { ...ficha, meta: { ...ficha.meta, ...alvo }, turmas };
         }}
         // Sem localStorage do Adalove aqui: o usuário vem do fixture de
         // /users/details, o que exercita a foto real e o fallback de erro.
