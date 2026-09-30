@@ -13,7 +13,7 @@ export function Select({
     <div className="relative">
       <select
         className={cn(
-          "h-9 w-full appearance-none rounded-control border border-line bg-bg pl-3 pr-8 text-sm text-fg outline-none transition-colors duration-150",
+          "block h-9 w-full appearance-none rounded-control border border-line bg-bg pl-3 pr-8 text-sm text-fg outline-none transition-colors duration-150",
           "focus:border-accent",
           className,
         )}
