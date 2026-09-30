@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, RotateCw } from "lucide-react";
+import { ExternalLink, RotateCw } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -920,11 +920,9 @@ function Autorizar({ onAuthorize }: { onAuthorize?: () => Promise<void> }) {
 export function MetricasAvancadas({
   fetchFicha,
   authorizeFicha,
-  onBack,
 }: {
   fetchFicha?: () => Promise<Ficha>;
   authorizeFicha?: () => Promise<void>;
-  onBack?: () => void;
 }) {
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [error, setError] = useState<FichaError["reason"] | null>(
@@ -958,17 +956,6 @@ export function MetricasAvancadas({
 
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-baseline gap-x-3">

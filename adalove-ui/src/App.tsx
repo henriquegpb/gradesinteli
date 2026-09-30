@@ -562,22 +562,21 @@ function Workspace({
           <MetricasAvancadas
             fetchFicha={fetchFicha}
             authorizeFicha={authorizeFicha}
-            onBack={() => setRoute("overview")} />
+          />
         )}
-        {route === "noticias" && <Noticias onBack={() => setRoute("overview")} />}
-        {route === "financeiro" && <Financeiro onBack={() => setRoute("overview")} />}
-        {route === "cardapio" && <Cardapio onBack={() => setRoute("overview")} />}
-        {route === "atendimento" && <Atendimento onBack={() => setRoute("overview")} />}
-        {route === "historico" && <Historico onBack={() => setRoute("overview")} />}
-        {route === "carreiras" && <Carreiras onBack={() => setRoute("overview")} />}
-        {route === "intercambio" && <Intercambio onBack={() => setRoute("overview")} />}
-        {route === "simulados" && <Simulados onBack={() => setRoute("overview")} />}
+        {route === "noticias" && <Noticias />}
+        {route === "financeiro" && <Financeiro />}
+        {route === "cardapio" && <Cardapio />}
+        {route === "atendimento" && <Atendimento />}
+        {route === "historico" && <Historico />}
+        {route === "carreiras" && <Carreiras />}
+        {route === "intercambio" && <Intercambio />}
+        {route === "simulados" && <Simulados />}
         {route === "nao-encontrada" && <NaoEncontrada onRoute={setRoute} />}
         {route.startsWith("pagina:") && (
           <Pagina
             key={route}
             slug={route.slice("pagina:".length) as PageSlug}
-            onBack={() => setRoute("overview")}
           />
         )}
         </div>

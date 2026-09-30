@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Globe2 } from "lucide-react";
+import { ExternalLink, Globe2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApi } from "~/data/api";
 import { formatDate } from "~/lib/date";
@@ -29,7 +29,7 @@ interface Agreement {
   website: string | null;
 }
 
-export function Intercambio({ onBack }: { onBack?: () => void }) {
+export function Intercambio() {
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("all");
 
@@ -56,17 +56,6 @@ export function Intercambio({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h1 className="text-xl font-medium text-fg">Intercâmbio</h1>
         <span className="font-mono text-xs text-fg-muted tabular">

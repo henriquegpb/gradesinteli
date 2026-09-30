@@ -1,4 +1,3 @@
-import { ArrowLeft } from "lucide-react";
 import { useApi } from "~/data/api";
 import { cn } from "~/lib/cn";
 import { formatDate } from "~/lib/date";
@@ -55,7 +54,7 @@ function statusTone(status: string | null): "positive" | "negative" | "default" 
   return "default";
 }
 
-export function Historico({ onBack }: { onBack?: () => void }) {
+export function Historico() {
   const { data, loading, error } = useApi<{ programs: Program[] }>(
     "/student-curriculums/student-record",
   );
@@ -68,17 +67,6 @@ export function Historico({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h1 className="text-xl font-medium text-fg">Histórico escolar</h1>
         {program?.name && <span className="text-xs text-fg-muted">{program.name}</span>}

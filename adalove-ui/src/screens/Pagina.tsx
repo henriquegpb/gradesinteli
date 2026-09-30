@@ -1,4 +1,3 @@
-import { ArrowLeft } from "lucide-react";
 import { useMemo } from "react";
 import { useApi } from "~/data/api";
 import { renderAdalovePage } from "~/lib/adalovePage";
@@ -39,7 +38,7 @@ function dropRedundantTitle(content: string, title: string): string {
   );
 }
 
-export function Pagina({ slug, onBack }: { slug: PageSlug; onBack?: () => void }) {
+export function Pagina({ slug }: { slug: PageSlug }) {
   const { data, loading, error } = useApi<{ content?: string }>(`/pages/slug/${slug}`);
 
   const html = useMemo(() => {
@@ -49,17 +48,6 @@ export function Pagina({ slug, onBack }: { slug: PageSlug; onBack?: () => void }
 
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <h1 className="text-xl font-medium text-fg">{PAGE_SLUGS[slug]}</h1>
 
       {loading && (

@@ -1,4 +1,4 @@
-import { ArrowLeft, BookMarked, CalendarClock } from "lucide-react";
+import { BookMarked, CalendarClock } from "lucide-react";
 import { useApi } from "~/data/api";
 import { Badge } from "~/ui/Badge";
 import { Card } from "~/ui/Card";
@@ -44,23 +44,12 @@ function Window({
   );
 }
 
-export function Simulados({ onBack }: { onBack?: () => void }) {
+export function Simulados() {
   const { data, loading, error } = useApi<MockTest[]>("/admission-processes/mock-tests");
   const tests = Array.isArray(data) ? data : [];
 
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <h1 className="text-xl font-medium text-fg">Simulados</h1>
 
       {loading && <SkeletonList rows={2} />}

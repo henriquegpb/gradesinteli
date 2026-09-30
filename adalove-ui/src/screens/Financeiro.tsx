@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Copy, Download, FileText, Loader2 } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useApi } from "~/data/api";
 import { downloadBankSlip } from "~/data/client";
@@ -199,7 +199,7 @@ function InvoicesTable({ invoices }: { invoices: Invoice[] }) {
 
 type Tab = "abertos" | "pagos" | "notas";
 
-export function Financeiro({ onBack }: { onBack?: () => void }) {
+export function Financeiro() {
   const [tab, setTab] = useState<Tab>("abertos");
   const slips = useApi<{ pendingSlips: BankSlip[]; paidSlips: BankSlip[] }>(BANK_SLIPS_PATH);
   const invoices = useApi<{ invoices: Invoice[] }>("/students/invoices");
@@ -213,17 +213,6 @@ export function Financeiro({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <h1 className="text-xl font-medium text-fg">Financeiro</h1>
 
       {loading && (

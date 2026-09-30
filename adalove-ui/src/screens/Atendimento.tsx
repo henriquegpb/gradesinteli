@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowUpRight, Headset, LifeBuoy } from "lucide-react";
+import { ArrowUpRight, Headset, LifeBuoy } from "lucide-react";
 import { Card } from "~/ui/Card";
 
 // `/service-channels` é a única rota do menu cujo payload não apareceu em
@@ -29,20 +29,9 @@ const CHANNELS: Channel[] = [
   },
 ];
 
-export function Atendimento({ onBack }: { onBack?: () => void }) {
+export function Atendimento() {
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <h1 className="text-xl font-medium text-fg">Atendimento</h1>
       <p className="text-xs text-fg-muted">
         O atendimento do Inteli fica fora do Adalove: estes links abrem em outra aba.

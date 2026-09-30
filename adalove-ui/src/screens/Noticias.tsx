@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApi } from "~/data/api";
 import { normalizeNews, relativeTime, type NewsItem } from "~/data/news";
@@ -36,7 +36,7 @@ function NewsRow({ item, onOpen }: { item: NewsItem; onOpen: (n: NewsItem) => vo
   );
 }
 
-export function Noticias({ onBack }: { onBack?: () => void }) {
+export function Noticias() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<NewsItem | null>(null);
 
@@ -51,17 +51,6 @@ export function Noticias({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h1 className="text-xl font-medium text-fg">Notícias</h1>
         {data?.meta?.totalItems != null && (

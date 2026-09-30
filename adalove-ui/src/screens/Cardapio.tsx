@@ -1,6 +1,5 @@
 import {
   Apple,
-  ArrowLeft,
   Banana,
   Bean,
   Beef,
@@ -139,7 +138,7 @@ function DishList({ title, items }: { title: string; items: [DishKey, string][] 
   );
 }
 
-export function Cardapio({ onBack }: { onBack?: () => void }) {
+export function Cardapio() {
   const { data, loading, error } = useApi<TodaysMenu>("/restaurant-menus/todays-menu");
 
   const today = new Date().toLocaleDateString("pt-BR", {
@@ -157,17 +156,6 @@ export function Cardapio({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-fg-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft size={13} aria-hidden />
-          Acadêmico
-        </button>
-      )}
-
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h1 className="text-xl font-medium text-fg">Cardápio</h1>
         <span className="text-xs capitalize text-fg-muted">{today}</span>
